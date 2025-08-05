@@ -306,20 +306,57 @@ export class PokemonDataService {
 
   // Get Pokemon by ID or name
   getPokemon(identifier: string | number): Pokemon | null {
-    let pokemon: Pokemon | null = null;
-    
-    if (typeof identifier === 'number') {
-      pokemon = this.pokemonData.find(p => p.id === identifier) || null;
-    } else {
-      const name = identifier.toLowerCase();
-      pokemon = this.pokemonData.find(p => 
-        p.name.toLowerCase() === name || 
-        p.id.toString() === identifier
-      ) || null;
+    try {
+      // Validate input
+      if (identifier === null || identifier === undefined) {
+        console.debug('Invalid identifier provided to getPokemon:', identifier);
+        return null;
+      }
+
+      // Check if service is initialized
+      if (!this.isInitialized()) {
+        throw new ServiceNotInitializedError('Service must be initialized before getting Pokemon data');
+      }
+
+      let pokemon: Pokemon | null = null;
+      
+      if (typeof identifier === 'number') {
+        // Validate number input
+        if (identifier < 1 || !Number.isInteger(identifier)) {
+          console.debug(`Invalid Pokemon ID: ${identifier} (must be positive integer)`);
+          return null;
+        }
+        pokemon = this.pokemonData.find(p => p.id === identifier) || null;
+      } else if (typeof identifier === 'string') {
+        // Validate and sanitize string input
+        const sanitizedName = identifier.trim().toLowerCase();
+        if (sanitizedName.length === 0) {
+          console.debug('Empty Pokemon name provided');
+          return null;
+        }
+        pokemon = this.pokemonData.find(p => 
+          p.name.toLowerCase() === sanitizedName || 
+          p.id.toString() === identifier.trim()
+        ) || null;
+      } else {
+        console.debug(`Invalid identifier type: ${typeof identifier}`);
+        return null;
+      }
+      
+      return pokemon ? this.transformImageUrls(pokemon) : null;
+      
+    } catch (error) {
+      console.error('💥 Error in getPokemon:', error);
+      
+      // For non-critical errors, return null instead of throwing
+      if (error instanceof ServiceNotInitializedError) {
+        console.warn('⚠️ Returning null due to service not initialized');
+        return null;
+      }
+      
+      // Re-throw unexpected errors
+      throw error;
     }
-    
-    // Transform image URLs to use local server
-    return pokemon ? this.transformImageUrls(pokemon) : null;
   }
 
   // Get Pokemon species by ID or name
@@ -416,35 +453,91 @@ export class PokemonDataService {
 
   // Get Pokemon name suggestions for search functionality
   getPokemonSuggestions(query: string): string[] {
-    // Validate input
-    if (!query || typeof query !== 'string') {
-      return [];
+    try {
+      // Validate input
+      if (!query || typeof query !== 'string') {
+        console.debug('Invalid query provided to getPokemonSuggestions:', { query, type: typeof query });
+        return [];
+      }
+
+      // Sanitize input
+      const sanitizedQuery = query.trim();
+      if (sanitizedQuery.length === 0) {
+        console.debug('Empty query after sanitization');
+        return [];
+      }
+
+      // Enforce minimum query length (business rule)
+      if (sanitizedQuery.length < 3) {
+        console.debug(`Query too short: ${sanitizedQuery.length} characters (minimum: 3)`);
+        return [];
+      }
+
+      // Check if service is initialized
+      if (!this.isInitialized()) {
+        throw new ServiceNotInitializedError('Service must be initialized before getting suggestions');
+      }
+
+      // Check if suggestions data is loaded
+      if (!this.suggestionsData || !this.suggestionsData.pokemon) {
+        console.warn('⚠️ Suggestions data not loaded - returning empty results');
+        return [];
+      }
+
+      // Validate suggestions data structure
+      if (!Array.isArray(this.suggestionsData.pokemon)) {
+        throw new ValidationError('Suggestions data is corrupted - pokemon array is invalid');
+      }
+
+      const queryLower = sanitizedQuery.toLowerCase();
+      
+      // Filter Pokemon names that contain the query string with error handling
+      try {
+        const suggestions = this.suggestionsData.pokemon
+          .filter((pokemon: PokemonSuggestion) => {
+            // Validate each Pokemon entry
+            if (!pokemon || typeof pokemon.name !== 'string') {
+              console.warn('Invalid Pokemon entry found in suggestions data:', pokemon);
+              return false;
+            }
+            return pokemon.name.toLowerCase().includes(queryLower);
+          })
+          .map((pokemon: PokemonSuggestion) => {
+            try {
+              // Capitalize first letter for proper display
+              const name = pokemon.displayName || pokemon.name;
+              if (typeof name !== 'string') {
+                console.warn('Invalid name found for Pokemon:', pokemon);
+                return pokemon.name; // Fallback to original name
+              }
+              return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+            } catch (error) {
+              console.warn('Error processing Pokemon name:', pokemon, error);
+              return pokemon.name; // Fallback to original name
+            }
+          })
+          .slice(0, 10); // Limit to 10 suggestions
+
+        console.debug(`Found ${suggestions.length} suggestions for query: "${sanitizedQuery}"`);
+        return suggestions;
+        
+      } catch (error) {
+        console.error('Error filtering suggestions:', error);
+        throw new ValidationError(`Failed to process suggestions: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+      
+    } catch (error) {
+      console.error('💥 Error in getPokemonSuggestions:', error);
+      
+      // For non-critical errors, return empty array instead of throwing
+      if (error instanceof ServiceNotInitializedError || error instanceof ValidationError) {
+        console.warn('⚠️ Returning empty suggestions due to error:', error.message);
+        return [];
+      }
+      
+      // Re-throw unexpected errors
+      throw error;
     }
-
-    // Business rule: minimum 3 characters required
-    if (query.length < 3) {
-      return [];
-    }
-
-    // Check if suggestions data is loaded
-    if (!this.suggestionsData || !this.suggestionsData.pokemon) {
-      console.warn('Suggestions data not loaded');
-      return [];
-    }
-
-    const queryLower = query.toLowerCase().trim();
-    
-    // Filter Pokemon names that contain the query string
-    const suggestions = this.suggestionsData.pokemon
-      .filter((pokemon: PokemonSuggestion) => pokemon.name.includes(queryLower))
-      .map((pokemon: PokemonSuggestion) => {
-        // Capitalize first letter for proper display
-        const name = pokemon.displayName || pokemon.name;
-        return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-      })
-      .slice(0, 10); // Limit to 10 suggestions
-
-    return suggestions;
   }
 
   // Reload data (useful after scraping new data)
