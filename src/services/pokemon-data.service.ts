@@ -9,6 +9,28 @@ import {
   PokemonSuggestion
 } from '../types/pokemon';
 
+// Custom Error Classes for better error handling
+class DataLoadError extends Error {
+  constructor(message: string, public filePath?: string, public originalError?: Error) {
+    super(message);
+    this.name = 'DataLoadError';
+  }
+}
+
+class ValidationError extends Error {
+  constructor(message: string, public validationErrors?: string[]) {
+    super(message);
+    this.name = 'ValidationError';
+  }
+}
+
+class ServiceNotInitializedError extends Error {
+  constructor(message: string = 'Service is not properly initialized') {
+    super(message);
+    this.name = 'ServiceNotInitializedError';
+  }
+}
+
 export class PokemonDataService {
   private readonly dataDir: string;
   private pokemonData: Pokemon[] = [];
@@ -29,10 +51,19 @@ export class PokemonDataService {
   async initialize(): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
+        console.log('🔄 Initializing Pokemon data service...');
         this.loadData();
+        
+        // Verify critical data is loaded
+        if (this.pokemonData.length === 0) {
+          throw new ServiceNotInitializedError('No Pokemon data loaded - service cannot function');
+        }
+        
+        console.log('✅ Pokemon data service initialized successfully');
         resolve();
       } catch (error) {
-        reject(error);
+        console.error('💥 Failed to initialize Pokemon data service:', error);
+        reject(error instanceof Error ? error : new Error('Unknown initialization error'));
       }
     });
   }
@@ -103,40 +134,142 @@ export class PokemonDataService {
   }
 
   private loadData(): void {
+    const errors: string[] = [];
+    
     try {
-      // Load Pokemon data
-      const pokemonPath = path.join(this.dataDir, 'pokemon.json');
-      if (fs.existsSync(pokemonPath)) {
-        this.pokemonData = JSON.parse(fs.readFileSync(pokemonPath, 'utf-8'));
+      // Verify data directory exists
+      if (!fs.existsSync(this.dataDir)) {
+        throw new DataLoadError(`Data directory does not exist: ${this.dataDir}`);
       }
 
-      // Load species data
-      const speciesPath = path.join(this.dataDir, 'species.json');
-      if (fs.existsSync(speciesPath)) {
-        this.speciesData = JSON.parse(fs.readFileSync(speciesPath, 'utf-8'));
+      // Load Pokemon data with error handling
+      try {
+        const pokemonPath = path.join(this.dataDir, 'pokemon.json');
+        if (fs.existsSync(pokemonPath)) {
+          const rawData = fs.readFileSync(pokemonPath, 'utf-8');
+          this.pokemonData = JSON.parse(rawData);
+          
+          if (!Array.isArray(this.pokemonData)) {
+            throw new ValidationError('Pokemon data must be an array');
+          }
+          
+          console.log(`✅ Loaded ${this.pokemonData.length} Pokemon`);
+        } else {
+          errors.push('Pokemon data file not found');
+          console.warn('⚠️ Pokemon data file not found');
+        }
+      } catch (error) {
+        const errorMsg = `Failed to load Pokemon data: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        errors.push(errorMsg);
+        console.error('❌', errorMsg);
+        throw new DataLoadError(errorMsg, 'pokemon.json', error instanceof Error ? error : undefined);
       }
 
-      // Load evolution chains
-      const evolutionPath = path.join(this.dataDir, 'evolution-chains.json');
-      if (fs.existsSync(evolutionPath)) {
-        this.evolutionChains = JSON.parse(fs.readFileSync(evolutionPath, 'utf-8'));
+      // Load species data with error handling
+      try {
+        const speciesPath = path.join(this.dataDir, 'species.json');
+        if (fs.existsSync(speciesPath)) {
+          const rawData = fs.readFileSync(speciesPath, 'utf-8');
+          this.speciesData = JSON.parse(rawData);
+          
+          if (!Array.isArray(this.speciesData)) {
+            throw new ValidationError('Species data must be an array');
+          }
+          
+          console.log(`✅ Loaded ${this.speciesData.length} species`);
+        } else {
+          errors.push('Species data file not found');
+          console.warn('⚠️ Species data file not found');
+        }
+      } catch (error) {
+        const errorMsg = `Failed to load species data: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        errors.push(errorMsg);
+        console.error('❌', errorMsg);
+        // Don't throw for optional data, just log
       }
 
-      // Load type data
-      const typePath = path.join(this.dataDir, 'types.json');
-      if (fs.existsSync(typePath)) {
-        this.typeData = JSON.parse(fs.readFileSync(typePath, 'utf-8'));
+      // Load evolution chains with error handling
+      try {
+        const evolutionPath = path.join(this.dataDir, 'evolution-chains.json');
+        if (fs.existsSync(evolutionPath)) {
+          const rawData = fs.readFileSync(evolutionPath, 'utf-8');
+          this.evolutionChains = JSON.parse(rawData);
+          
+          if (!Array.isArray(this.evolutionChains)) {
+            throw new ValidationError('Evolution chains data must be an array');
+          }
+          
+          console.log(`✅ Loaded ${this.evolutionChains.length} evolution chains`);
+        } else {
+          errors.push('Evolution chains data file not found');
+          console.warn('⚠️ Evolution chains data file not found');
+        }
+      } catch (error) {
+        const errorMsg = `Failed to load evolution chains: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        errors.push(errorMsg);
+        console.error('❌', errorMsg);
+        // Don't throw for optional data, just log
       }
 
-      // Load suggestions data
-      const suggestionsPath = path.join(this.dataDir, 'suggestions.json');
-      if (fs.existsSync(suggestionsPath)) {
-        this.suggestionsData = JSON.parse(fs.readFileSync(suggestionsPath, 'utf-8'));
+      // Load type data with error handling
+      try {
+        const typePath = path.join(this.dataDir, 'types.json');
+        if (fs.existsSync(typePath)) {
+          const rawData = fs.readFileSync(typePath, 'utf-8');
+          this.typeData = JSON.parse(rawData);
+          
+          if (!Array.isArray(this.typeData)) {
+            throw new ValidationError('Type data must be an array');
+          }
+          
+          console.log(`✅ Loaded ${this.typeData.length} types`);
+        } else {
+          errors.push('Type data file not found');
+          console.warn('⚠️ Type data file not found');
+        }
+      } catch (error) {
+        const errorMsg = `Failed to load type data: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        errors.push(errorMsg);
+        console.error('❌', errorMsg);
+        // Don't throw for optional data, just log
       }
 
-      console.log(`Loaded ${this.pokemonData.length} Pokemon, ${this.typeData.length} types, ${this.evolutionChains.length} evolution chains, ${this.suggestionsData?.pokemon?.length || 0} suggestions`);
+      // Load suggestions data with error handling (critical for suggestions feature)
+      try {
+        const suggestionsPath = path.join(this.dataDir, 'suggestions.json');
+        if (fs.existsSync(suggestionsPath)) {
+          const rawData = fs.readFileSync(suggestionsPath, 'utf-8');
+          this.suggestionsData = JSON.parse(rawData);
+          
+          // Validate suggestions data structure
+          if (!this.suggestionsData || !this.suggestionsData.pokemon || !Array.isArray(this.suggestionsData.pokemon)) {
+            throw new ValidationError('Invalid suggestions data structure');
+          }
+          
+          console.log(`✅ Loaded ${this.suggestionsData.pokemon.length} suggestions`);
+        } else {
+          errors.push('Suggestions data file not found');
+          console.warn('⚠️ Suggestions data file not found - suggestions feature will not work');
+        }
+      } catch (error) {
+        const errorMsg = `Failed to load suggestions data: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        errors.push(errorMsg);
+        console.error('❌', errorMsg);
+        // Don't throw for suggestions data, but warn
+        console.warn('⚠️ Suggestions feature will not be available');
+      }
+
+      // Summary logging
+      if (errors.length > 0) {
+        console.warn(`⚠️ Data loading completed with ${errors.length} warnings/errors:`);
+        errors.forEach(error => console.warn(`  - ${error}`));
+      } else {
+        console.log('✅ All data loaded successfully');
+      }
+      
     } catch (error) {
-      console.error('Error loading Pokemon data:', error);
+      console.error('💥 Critical error during data loading:', error);
+      throw error; // Re-throw critical errors
     }
   }
 
