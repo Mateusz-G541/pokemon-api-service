@@ -1,6 +1,13 @@
 import fs from 'fs';
 import path from 'path';
-import { Pokemon, PokemonType, PokemonSpecies, EvolutionChain } from '../types/pokemon';
+import { 
+  Pokemon, 
+  PokemonType, 
+  PokemonSpecies, 
+  EvolutionChain,
+  SuggestionsData,
+  PokemonSuggestion
+} from '../types/pokemon';
 
 export class PokemonDataService {
   private readonly dataDir: string;
@@ -8,10 +15,91 @@ export class PokemonDataService {
   private speciesData: PokemonSpecies[] = [];
   private evolutionChains: EvolutionChain[] = [];
   private typeData: PokemonType[] = [];
+  private suggestionsData: SuggestionsData | null = null;
 
   constructor() {
     this.dataDir = path.join(__dirname, '..', '..', 'data');
     this.loadData();
+  }
+
+  /**
+   * Public method to initialize/reload data
+   * This method is safe for tests to call and provides proper encapsulation
+   */
+  async initialize(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      try {
+        this.loadData();
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Check if the service is properly initialized with data
+   */
+  isInitialized(): boolean {
+    return this.pokemonData.length > 0 || 
+           this.suggestionsData !== null;
+  }
+
+  /**
+   * Get initialization status with detailed information
+   * Useful for tests to verify what data is loaded
+   */
+  getInitializationStatus(): {
+    pokemonDataLoaded: boolean;
+    suggestionsDataLoaded: boolean;
+    pokemonCount: number;
+    suggestionsCount: number;
+  } {
+    return {
+      pokemonDataLoaded: this.pokemonData.length > 0,
+      suggestionsDataLoaded: this.suggestionsData !== null,
+      pokemonCount: this.pokemonData.length,
+      suggestionsCount: this.suggestionsData?.pokemon?.length || 0
+    };
+  }
+
+  /**
+   * Validate suggestions data structure
+   * Useful for tests to ensure data integrity
+   */
+  validateSuggestionsData(): { isValid: boolean; errors: string[] } {
+    const errors: string[] = [];
+    
+    if (!this.suggestionsData) {
+      errors.push('Suggestions data is not loaded');
+      return { isValid: false, errors };
+    }
+    
+    if (!this.suggestionsData.metadata) {
+      errors.push('Missing metadata in suggestions data');
+    }
+    
+    if (!Array.isArray(this.suggestionsData.pokemon)) {
+      errors.push('Pokemon array is missing or invalid');
+    } else {
+      // Validate each Pokemon entry
+      this.suggestionsData.pokemon.forEach((pokemon, index) => {
+        if (!pokemon.id || typeof pokemon.id !== 'number') {
+          errors.push(`Pokemon at index ${index} has invalid id`);
+        }
+        if (!pokemon.name || typeof pokemon.name !== 'string') {
+          errors.push(`Pokemon at index ${index} has invalid name`);
+        }
+        if (!pokemon.displayName || typeof pokemon.displayName !== 'string') {
+          errors.push(`Pokemon at index ${index} has invalid displayName`);
+        }
+      });
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
   }
 
   private loadData(): void {
@@ -40,7 +128,13 @@ export class PokemonDataService {
         this.typeData = JSON.parse(fs.readFileSync(typePath, 'utf-8'));
       }
 
-      console.log(`Loaded ${this.pokemonData.length} Pokemon, ${this.typeData.length} types, ${this.evolutionChains.length} evolution chains`);
+      // Load suggestions data
+      const suggestionsPath = path.join(this.dataDir, 'suggestions.json');
+      if (fs.existsSync(suggestionsPath)) {
+        this.suggestionsData = JSON.parse(fs.readFileSync(suggestionsPath, 'utf-8'));
+      }
+
+      console.log(`Loaded ${this.pokemonData.length} Pokemon, ${this.typeData.length} types, ${this.evolutionChains.length} evolution chains, ${this.suggestionsData?.pokemon?.length || 0} suggestions`);
     } catch (error) {
       console.error('Error loading Pokemon data:', error);
     }
@@ -185,6 +279,39 @@ export class PokemonDataService {
       totalEvolutionChains: this.evolutionChains.length,
       totalSpecies: this.speciesData.length,
     };
+  }
+
+  // Get Pokemon name suggestions for search functionality
+  getPokemonSuggestions(query: string): string[] {
+    // Validate input
+    if (!query || typeof query !== 'string') {
+      return [];
+    }
+
+    // Business rule: minimum 3 characters required
+    if (query.length < 3) {
+      return [];
+    }
+
+    // Check if suggestions data is loaded
+    if (!this.suggestionsData || !this.suggestionsData.pokemon) {
+      console.warn('Suggestions data not loaded');
+      return [];
+    }
+
+    const queryLower = query.toLowerCase().trim();
+    
+    // Filter Pokemon names that contain the query string
+    const suggestions = this.suggestionsData.pokemon
+      .filter((pokemon: PokemonSuggestion) => pokemon.name.includes(queryLower))
+      .map((pokemon: PokemonSuggestion) => {
+        // Capitalize first letter for proper display
+        const name = pokemon.displayName || pokemon.name;
+        return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+      })
+      .slice(0, 10); // Limit to 10 suggestions
+
+    return suggestions;
   }
 
   // Reload data (useful after scraping new data)

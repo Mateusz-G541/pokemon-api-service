@@ -177,3 +177,122 @@ export interface EvolutionChain {
     evolves_to: Array<any>;
   };
 }
+
+// ===== SUGGESTIONS DATA INTERFACES =====
+
+/**
+ * Individual Pokemon entry in suggestions data
+ * (Different from main Pokemon interface - simpler structure for suggestions)
+ */
+export interface PokemonSuggestion {
+  /** Unique identifier for the Pokemon */
+  id: number;
+  /** Pokemon name in lowercase (from API) */
+  name: string;
+  /** Display name for UI (usually same as name) */
+  displayName: string;
+}
+
+/**
+ * Metadata information for the suggestions dataset
+ */
+export interface SuggestionsMetadata {
+  /** ISO timestamp when data was generated */
+  generatedAt: string;
+  /** Total number of Pokemon in the dataset */
+  totalCount: number;
+  /** Pokemon generation (1 for Gen 1) */
+  generation: number;
+  /** Human-readable description of the dataset */
+  description: string;
+}
+
+/**
+ * Complete suggestions data structure loaded from JSON
+ */
+export interface SuggestionsData {
+  /** Metadata about the dataset */
+  metadata: SuggestionsMetadata;
+  /** Array of Pokemon entries for suggestions */
+  pokemon: PokemonSuggestion[];
+}
+
+/**
+ * Configuration options for Pokemon suggestions
+ */
+export interface SuggestionConfig {
+  /** Minimum query length required */
+  minQueryLength: number;
+  /** Maximum number of suggestions to return */
+  maxSuggestions: number;
+  /** Timeout for suggestion operations (ms) */
+  timeoutMs: number;
+}
+
+// ===== TEST DATA INTERFACES =====
+
+/**
+ * Options for suggestion query validation in tests
+ */
+export interface SuggestionValidationOptions {
+  /** Minimum expected count of results */
+  minCount?: number;
+  /** Maximum expected count of results */
+  maxCount?: number;
+  /** Pokemon names that should be included in results */
+  shouldContain?: string[];
+  /** Pokemon names that should NOT be included in results */
+  shouldNotContain?: string[];
+  /** Whether empty results are acceptable */
+  allowEmpty?: boolean;
+}
+
+/**
+ * Test case data structure for data-driven testing
+ */
+export interface TestCase<T = any> {
+  /** Descriptive name for the test case */
+  name: string;
+  /** Test data payload */
+  data: T;
+}
+
+/**
+ * Query test data structure
+ */
+export interface QueryTestData {
+  /** Search query string */
+  query: string;
+  /** Expected Pokemon names in results */
+  expectedResults: string[];
+  /** Minimum expected result count */
+  minExpectedCount: number;
+  /** Maximum expected result count */
+  maxExpectedCount: number;
+  /** Human-readable description of what this test validates */
+  description: string;
+}
+
+/**
+ * Invalid query test data structure
+ */
+export interface InvalidQueryTestData {
+  /** Invalid search query */
+  query: string;
+  /** Expected count (usually 0 for invalid queries) */
+  expectedCount: number;
+  /** Description of why this query is invalid */
+  description: string;
+}
+
+/**
+ * Performance test result
+ */
+export interface PerformanceResult<T> {
+  /** The actual result from the operation */
+  result: T;
+  /** Time taken in milliseconds */
+  executionTime: number;
+  /** Whether the operation completed within acceptable time */
+  withinTimeLimit: boolean;
+}
