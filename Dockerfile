@@ -1,5 +1,7 @@
-# Use Node.js 18 Alpine for smaller image size
-FROM node:18-alpine
+# Multi-stage build for optimal image size and security
+
+# Stage 1: Build stage
+FROM node:18-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -7,14 +9,32 @@ WORKDIR /app
 # Copy package files first for better caching
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Install ALL dependencies (including devDependencies for build)
+RUN npm ci && npm cache clean --force
 
 # Copy source code
 COPY . .
 
 # Build the TypeScript application
 RUN npm run build
+
+# Stage 2: Production stage
+FROM node:18-alpine AS production
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install only production dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+# Copy built application from builder stage
+COPY --from=builder /app/dist ./dist
+
+# Copy data directory (will be created during runtime if needed)
+# Note: data directory is optional and will be created by the app if needed
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
