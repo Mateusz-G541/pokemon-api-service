@@ -40,14 +40,14 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: quavaghar2
+          password: dckr_pat_7joUBYHeGvzZjKvhCOBJZkFYFGo
 
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}
+          images: quavaghar2/${{ env.DOCKER_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -69,7 +69,7 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           echo "🧪 Testing Docker image..."
-          docker run --rm -d -p 20275:20275 --name test-container ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:latest
+          docker run --rm -d -p 20275:20275 --name test-container quavaghar2/${{ env.DOCKER_IMAGE_NAME }}:latest
           
           # Wait for container to start
           sleep 10
