@@ -48,9 +48,9 @@ USER pokemon
 # Expose the port
 EXPOSE 20275
 
-# Temporarily disable health check for debugging
-# HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-#     CMD wget --no-verbose --tries=1 --spider http://localhost:20275/health || exit 1
+# Health check with extended timeout for data loading (4-5 minutes)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=300s --retries=10 \
+    CMD curl -f http://localhost:20275/health || exit 1
 
 # Start the application
 CMD ["npm", "start"]
