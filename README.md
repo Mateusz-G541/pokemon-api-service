@@ -1,14 +1,40 @@
 # Pokemon API Service
 
-A custom Pokemon API service that mimics the official Pokemon API, designed for test automation demonstrations.
+A custom Pokemon API service that mimics the official Pokemon API, designed for test automation demonstrations and CI/CD integration.
 
-## Architecture
+## 🚀 Quick Start
 
-This service is designed to be deployed on **Mikr.us VPS** and serves as a custom Pokemon API that:
-- Stores Pokemon data locally (JSON files + images)
-- Provides the same endpoints as the official Pokemon API
-- Serves Pokemon images statically
-- Includes data scraping capabilities
+### Docker (Recommended)
+```bash
+# Pull and run the latest image
+docker pull quavaghar2/pokemon-api-service:latest
+docker run -d -p 20275:20275 --name pokemon-api quavaghar2/pokemon-api-service:latest
+
+# Check health
+curl http://localhost:20275/health
+```
+
+### Local Development
+```bash
+npm install
+npm run scrape:pokemon  # Initial data setup
+npm run dev
+```
+
+## 🏗️ Architecture
+
+This service can be deployed in multiple environments:
+- **🐳 Docker Container** (Production-ready with health checks)
+- **☁️ Mikr.us VPS** (Custom hosting)
+- **🔧 Local Development** (Hot reload)
+- **🤖 CI/CD Service Container** (GitHub Actions integration)
+
+### Core Features:
+- 📊 **Pokemon Data**: 151 Generation 1 Pokemon with complete data
+- 🖼️ **Static Assets**: Pokemon sprites and artwork
+- 🔄 **Data Scraping**: Automated data collection from official API
+- 🏥 **Health Checks**: Robust monitoring and status endpoints
+- 🧪 **Test Integration**: Vitest test suite with professional practices
 
 ## Features
 
@@ -18,7 +44,50 @@ This service is designed to be deployed on **Mikr.us VPS** and serves as a custo
 - 🔄 **Hot Reload**: Reload data without restarting the service
 - 📈 **Statistics**: Service stats and health checks
 
-## Setup
+## 🐳 Docker Deployment
+
+### Production Deployment
+```bash
+# Pull the latest image from DockerHub
+docker pull quavaghar2/pokemon-api-service:latest
+
+# Run with proper port mapping
+docker run -d \
+  --name pokemon-api-service \
+  -p 20275:20275 \
+  -e NODE_ENV=production \
+  quavaghar2/pokemon-api-service:latest
+
+# Verify deployment
+curl http://localhost:20275/health
+```
+
+### Health Check Configuration
+The Docker image includes robust health checks:
+- **Grace Period**: 5 minutes for data loading
+- **Check Interval**: Every 30 seconds
+- **Timeout**: 10 seconds per check
+- **Retries**: 10 attempts before marking unhealthy
+- **Total Startup Time**: Up to 10 minutes
+
+### CI/CD Integration
+This service is designed for GitHub Actions service containers:
+
+```yaml
+services:
+  pokemon-api-service:
+    image: quavaghar2/pokemon-api-service:latest
+    ports:
+      - 20275:20275
+    options: >-
+      --health-cmd "curl -f http://localhost:20275/health || exit 1"
+      --health-interval 30s
+      --health-timeout 10s
+      --health-retries 10
+      --health-start-period 300s
+```
+
+## 🔧 Local Development Setup
 
 1. **Install Dependencies**:
    ```bash
@@ -38,10 +107,10 @@ This service is designed to be deployed on **Mikr.us VPS** and serves as a custo
 
 4. **Start the Service**:
    ```bash
-   # Development
+   # Development (with hot reload)
    npm run dev
    
-   # Production
+   # Production build
    npm run build
    npm start
    ```
@@ -70,21 +139,142 @@ This service is designed to be deployed on **Mikr.us VPS** and serves as a custo
 - `GET /images/pokemon/sprites/:id.png` - Pokemon sprites
 - `GET /images/pokemon/artwork/:id-artwork.png` - Pokemon artwork
 
-## Deployment to Mikr.us
+## ☁️ Deployment to Mikr.us VPS
 
-1. **Upload files** to your Mikr.us VPS
-2. **Install Node.js** and npm
-3. **Install dependencies**: `npm install`
-4. **Build the project**: `npm run build`
-5. **Scrape data**: `npm run scrape:pokemon`
-6. **Start the service**: `npm start`
+### Traditional VPS Deployment
+```bash
+# 1. Upload files to your Mikr.us VPS
+scp -r . user@srv36.mikr.us:/path/to/pokemon-api-service
 
-## Environment Variables
+# 2. SSH into VPS and setup
+ssh user@srv36.mikr.us
+cd /path/to/pokemon-api-service
 
-- `PORT` - Server port (default: 3001)
-- `HOST` - Server host (default: 0.0.0.0)
-- `POKEMON_LIMIT` - Number of Pokemon to scrape (default: 151)
-- `ALLOWED_ORIGINS` - CORS allowed origins (comma-separated)
+# 3. Install dependencies and build
+npm install
+npm run build
+npm run scrape:pokemon
+
+# 4. Start with PM2 (recommended)
+npm install -g pm2
+pm2 start npm --name "pokemon-api" -- start
+pm2 save
+pm2 startup
+```
+
+## 🧪 Testing
+
+### Run Test Suite
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+```
+
+### Test Categories
+- **Unit Tests**: Core business logic and data processing
+- **Integration Tests**: API endpoints and data flow
+- **Service Tests**: Pokemon data service functionality
+- **Error Handling**: Validation and edge cases
+
+## 🌍 Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `20275` | Server port (Docker optimized) |
+| `HOST` | `0.0.0.0` | Server host (container-friendly) |
+| `NODE_ENV` | `development` | Environment mode |
+| `POKEMON_LIMIT` | `151` | Number of Pokemon to scrape (Gen 1) |
+| `ALLOWED_ORIGINS` | `*` | CORS allowed origins (comma-separated) |
+
+### Production Environment
+```bash
+# Docker environment variables
+docker run -d \
+  -e NODE_ENV=production \
+  -e PORT=20275 \
+  -e ALLOWED_ORIGINS="https://pokedex-87cl.vercel.app" \
+  -p 20275:20275 \
+  quavaghar2/pokemon-api-service:latest
+```
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+#### 1. Health Check Failures
+```bash
+# Check if service is running
+curl http://localhost:20275/health
+
+# Expected response:
+# {"status":"ok","service":"Pokemon API Service","timestamp":"..."}
+```
+
+**Solution**: Health checks require 4-5 minutes for data loading. Ensure:
+- Container has sufficient memory (>512MB)
+- Health check timeout is set to 300s+ start period
+- All data files are present in `/app/data/`
+
+#### 2. Port Binding Issues
+```bash
+# Check if port is in use
+netstat -tulpn | grep 20275
+
+# Kill existing process
+pkill -f "node.*pokemon"
+```
+
+#### 3. Missing Data Files
+```bash
+# Verify data files exist
+ls -la data/
+# Should contain: pokemon.json, species.json, evolution-chains.json, types.json, suggestions.json
+
+# Re-scrape if missing
+npm run scrape:pokemon
+```
+
+#### 4. Docker Build Issues
+```bash
+# Check Docker logs
+docker logs pokemon-api-service
+
+# Common issues:
+# - Missing devDependencies during build
+# - Incorrect file permissions
+# - Network connectivity for npm install
+```
+
+### Performance Optimization
+
+#### Memory Usage
+- **Minimum**: 256MB RAM
+- **Recommended**: 512MB RAM
+- **Optimal**: 1GB RAM (for faster startup)
+
+#### Startup Time
+- **Local Development**: ~30 seconds
+- **Docker Container**: ~4-5 minutes (data loading)
+- **CI/CD Environment**: ~3-4 minutes
+
+### Monitoring
+
+```bash
+# Check service status
+curl http://localhost:20275/api/v2/stats
+
+# Monitor Docker container
+docker stats pokemon-api-service
+
+# View logs
+docker logs -f pokemon-api-service
+```
 
 ## Data Structure
 
