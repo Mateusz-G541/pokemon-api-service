@@ -33,8 +33,9 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
 
-# Copy data directory (will be created during runtime if needed)
-# Note: data directory is optional and will be created by the app if needed
+# Copy essential directories for the application
+COPY --from=builder /app/data ./data
+COPY --from=builder /app/images ./images
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \

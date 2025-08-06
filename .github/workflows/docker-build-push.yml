@@ -75,10 +75,13 @@ jobs:
           echo "⏳ Waiting for container to start..."
           sleep 30
           
-          # Check if container is still running
+          # Check if container is still running and get logs
           if ! docker ps | grep -q test-container; then
             echo "❌ Container stopped unexpectedly"
-            docker logs test-container
+            echo "📋 Container logs:"
+            docker logs test-container 2>&1 || echo "Could not retrieve logs"
+            echo "🔍 Checking if container exists:"
+            docker ps -a | grep test-container || echo "Container not found in docker ps -a"
             exit 1
           fi
           
