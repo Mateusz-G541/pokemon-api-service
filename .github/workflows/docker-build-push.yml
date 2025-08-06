@@ -88,7 +88,7 @@ jobs:
           # Test health endpoint with retries
           echo "🔍 Testing health endpoint..."
           for i in {1..5}; do
-            if curl -f http://localhost:20275/api/health; then
+            if curl -f http://localhost:20275/health; then
               echo "✅ Health check passed!"
               break
             else
