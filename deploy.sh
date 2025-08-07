@@ -61,7 +61,7 @@ update_code() {
         log "Project directory exists, pulling latest changes..."
         cd "$PROJECT_DIR"
         git fetch origin
-        git reset --hard origin/main
+        git reset --hard origin/master
         git clean -fd
     else
         log "Cloning repository..."
