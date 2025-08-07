@@ -6,7 +6,7 @@
 set -e  # Exit on any error
 
 # Configuration
-REPO_URL="https://github.com/YOUR_USERNAME/pokemon-api-service.git"
+REPO_URL="https://github.com/Mateusz-G541/pokemon-api-service.git"
 PROJECT_DIR="/opt/pokemon-api-service"
 COMPOSE_FILE="docker-compose.prod.yml"
 SERVICE_NAME="pokemon-api"
