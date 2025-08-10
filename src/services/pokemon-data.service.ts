@@ -296,7 +296,7 @@ export class PokemonDataService {
         other: {
           ...pokemon.sprites.other,
           'official-artwork': {
-            front_default: `${baseUrl}/images/pokemon/official-artwork/${pokemon.id}.png`,
+            front_default: `${baseUrl}/images/pokemon/artwork/${pokemon.id}-artwork.png`,
             front_shiny: null
           }
         }

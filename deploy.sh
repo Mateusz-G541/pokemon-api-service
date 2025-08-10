@@ -36,6 +36,18 @@ warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
+# Detect Docker Compose command (v2 plugin vs legacy)
+set_compose_cmd() {
+    if docker compose version >/dev/null 2>&1; then
+        COMPOSE="docker compose"
+    elif command -v docker-compose >/dev/null 2>&1; then
+        COMPOSE="docker-compose"
+    else
+        error "Neither 'docker compose' (v2) nor 'docker-compose' (v1) is installed. Please install Docker Compose."
+        exit 1
+    fi
+}
+
 # Check if Docker and Docker Compose are installed
 check_dependencies() {
     log "Checking dependencies..."
@@ -44,11 +56,8 @@ check_dependencies() {
         error "Docker is not installed. Please install Docker first."
         exit 1
     fi
-    
-    if ! command -v docker-compose &> /dev/null; then
-        error "Docker Compose is not installed. Please install Docker Compose first."
-        exit 1
-    fi
+    # Set COMPOSE variable to appropriate command
+    set_compose_cmd
     
     success "Dependencies check passed"
 }
@@ -61,7 +70,20 @@ update_code() {
         log "Project directory exists, pulling latest changes..."
         cd "$PROJECT_DIR"
         git fetch origin
-        git reset --hard origin/master
+        # Determine default remote branch (prefer main, else master)
+        if git show-ref --verify --quiet refs/remotes/origin/main; then
+            TARGET_REF="origin/main"
+        elif git show-ref --verify --quiet refs/remotes/origin/master; then
+            TARGET_REF="origin/master"
+        else
+            # Fallback to remote HEAD if available
+            TARGET_REF="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^refs/remotes/##')"
+        fi
+        if [ -z "$TARGET_REF" ]; then
+            error "Unable to determine default remote branch (main/master)."
+            exit 1
+        fi
+        git reset --hard "$TARGET_REF"
         git clean -fd
     else
         log "Cloning repository..."
@@ -89,21 +111,37 @@ setup_environment() {
     success "Environment setup complete"
 }
 
+# Ensure permissions on important files
+ensure_permissions() {
+    log "Ensuring file permissions..."
+    # Make deploy script executable
+    chmod +x deploy.sh 2>/dev/null || true
+    # Make any shell scripts in scripts/ executable
+    if [ -d "scripts" ]; then
+        chmod +x scripts/*.sh 2>/dev/null || true
+    fi
+    # Makefile does not need executable bit; set readable by all
+    if [ -f "Makefile" ]; then
+        chmod 775 Makefile 2>/dev/null || true
+    fi
+    success "Permissions ensured"
+}
+
 # Build and deploy
 deploy() {
     log "Starting deployment..."
     
     # Stop existing services
     log "Stopping existing services..."
-    docker-compose -f "$COMPOSE_FILE" down --remove-orphans || true
+    $COMPOSE -f "$COMPOSE_FILE" down --remove-orphans || true
     
     # Build new image
     log "Building Docker image..."
-    docker-compose -f "$COMPOSE_FILE" build --no-cache
+    $COMPOSE -f "$COMPOSE_FILE" build --no-cache
     
     # Start services
     log "Starting services..."
-    docker-compose -f "$COMPOSE_FILE" up -d
+    $COMPOSE -f "$COMPOSE_FILE" up -d
     
     success "Services started"
 }
@@ -140,28 +178,28 @@ cleanup() {
 # Show status
 status() {
     log "Service Status:"
-    docker-compose -f "$COMPOSE_FILE" ps
+    $COMPOSE -f "$COMPOSE_FILE" ps
     
     log "Service Logs (last 20 lines):"
-    docker-compose -f "$COMPOSE_FILE" logs --tail=20
+    $COMPOSE -f "$COMPOSE_FILE" logs --tail=20
 }
 
 # Show logs
 logs() {
-    docker-compose -f "$COMPOSE_FILE" logs -f
+    $COMPOSE -f "$COMPOSE_FILE" logs -f
 }
 
 # Restart service
 restart() {
     log "Restarting service..."
-    docker-compose -f "$COMPOSE_FILE" restart
+    $COMPOSE -f "$COMPOSE_FILE" restart
     health_check
 }
 
 # Stop service
 stop() {
     log "Stopping service..."
-    docker-compose -f "$COMPOSE_FILE" down
+    $COMPOSE -f "$COMPOSE_FILE" down
     success "Service stopped"
 }
 
@@ -172,6 +210,7 @@ main_deploy() {
     check_dependencies
     update_code
     setup_environment
+    ensure_permissions
     deploy
     
     if health_check; then
@@ -181,7 +220,7 @@ main_deploy() {
     else
         error "Deployment failed - health check unsuccessful"
         log "Checking logs for errors..."
-        docker-compose -f "$COMPOSE_FILE" logs --tail=50
+        $COMPOSE -f "$COMPOSE_FILE" logs --tail=50
         exit 1
     fi
 }
