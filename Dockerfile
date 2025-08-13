@@ -45,12 +45,12 @@ RUN addgroup -g 1001 -S nodejs && \
 RUN chown -R pokemon:nodejs /app
 USER pokemon
 
-# Expose the port
-EXPOSE 20275
+# Expose the internal app port
+EXPOSE 3001
 
 # Health check with extended timeout for data loading (4-5 minutes)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=300s --retries=10 \
-    CMD curl -f http://localhost:20275/health || exit 1
+    CMD curl -f http://localhost:3001/health || exit 1
 
 # Start the application
 CMD ["npm", "start"]

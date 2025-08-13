@@ -32,7 +32,12 @@ app.use(
 );
 
 // Security headers
-app.use(helmet());
+// Allow cross-origin image embedding (frontend is on a different origin)
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
 
 // Rate limiting
 const limiter = rateLimit({

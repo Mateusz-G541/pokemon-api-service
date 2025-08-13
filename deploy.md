@@ -1,5 +1,62 @@
 # Deployment Guide for Mikr.us
 
+## Recommended: Docker Hub + Docker Compose (Production)
+
+This project is deployed from a Docker image published by GitHub Actions to Docker Hub. The VPS only needs Docker + Compose to pull and run the image.
+
+### Prerequisites
+- Docker and Docker Compose (v2 plugin or legacy) installed on your VPS
+- `.env.production` file on the VPS with production values
+
+Example `.env.production`:
+```env
+PORT=3001
+HOST=0.0.0.0
+POKEMON_LIMIT=151
+ALLOWED_ORIGINS=https://your-vercel-app.vercel.app
+```
+
+### Files used on VPS
+- `docker-compose.prod.yml` (uses image: `mateuszg541/pokemon-api-service:latest` and maps host 20275 -> container 3001)
+- `deploy.sh` helper script (pull + up + health check)
+
+### One-time setup on VPS
+```bash
+sudo apt update && sudo apt install -y docker.io docker-compose-plugin || true
+mkdir -p /opt/pokemon-api-service
+cd /opt/pokemon-api-service
+git clone https://github.com/Mateusz-G541/pokemon-api-service.git .
+cp .env.example .env.production && nano .env.production  # update values
+chmod +x deploy.sh
+```
+
+### Deploy/Update on VPS
+```bash
+cd /opt/pokemon-api-service
+./deploy.sh deploy
+```
+
+This will:
+- Detect compose command (v2/v1)
+- Pull latest image from Docker Hub
+- Start/update the container in background
+- Wait until health endpoint is OK
+
+### Verify
+```bash
+curl -f http://localhost:20275/health
+curl -f http://srvXX.mikr.us:20275/health   # replace with your server
+docker ps
+docker logs --tail 100 pokemon-api
+```
+
+### CI/CD (GitHub Actions)
+- Workflow: `.github/workflows/docker-build-push.yml`
+- On push to `main/master`: builds multi-arch image and pushes to Docker Hub as `latest` (and extra tags)
+- VPS only needs `./deploy.sh deploy` to pick up the new image
+
+---
+
 ## Prerequisites
 - Mikr.us VPS account and server access
 - Node.js 18+ installed on your VPS
@@ -88,7 +145,7 @@ POKEMON_LIMIT=151
 ALLOWED_ORIGINS=https://your-vercel-app.vercel.app,https://pokedex-87cl.vercel.app
 ```
 
-## Step 7: Setup Process Manager (PM2)
+## Legacy: Setup Process Manager (PM2)
 
 ```bash
 # Install PM2 globally
@@ -105,7 +162,7 @@ pm2 startup
 # Follow the instructions shown
 ```
 
-## Step 8: Configure Nginx (Optional but Recommended)
+## Optional: Configure Nginx (Reverse Proxy + HTTPS)
 
 ```bash
 # Install Nginx
@@ -115,14 +172,14 @@ sudo apt install nginx
 sudo nano /etc/nginx/sites-available/pokemon-api
 ```
 
-Add this configuration:
+Add this configuration (proxy to the Docker-exposed port 20275):
 ```nginx
 server {
     listen 80;
     server_name your-domain.mikr.us;
 
     location / {
-        proxy_pass http://localhost:3001;
+        proxy_pass http://localhost:20275;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -142,11 +199,11 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-## Step 9: Test Your Deployment
+## Test Your Deployment
 
 ```bash
-# Test locally on VPS
-curl http://localhost:3001/health
+# If running via Docker/Compose (recommended)
+curl http://localhost:20275/health
 
 # Test externally
 curl http://your-domain.mikr.us/health
