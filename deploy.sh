@@ -24,6 +24,31 @@ log() {
     echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1"
 }
 
+# Load environment variables from .env.production so we can use credentials if provided
+load_env() {
+    if [ -f ".env.production" ]; then
+        # shellcheck disable=SC2046
+        set -a
+        source .env.production
+        set +a
+    fi
+}
+
+# Login to Docker Hub if credentials are provided via env vars
+dockerhub_login() {
+    if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+        log "Logging into Docker Hub as $DOCKERHUB_USERNAME..."
+        # Use --password-stdin to avoid exposing token in process list
+        echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin || {
+            warning "Docker Hub login failed; proceeding without login"
+            return 0
+        }
+        success "Docker Hub login successful"
+    else
+        log "Docker Hub credentials not provided; attempting anonymous pull"
+    fi
+}
+
 error() {
     echo -e "${RED}[ERROR]${NC} $1" >&2
 }
@@ -135,6 +160,10 @@ deploy() {
     log "Stopping existing services..."
     $COMPOSE -f "$COMPOSE_FILE" down --remove-orphans || true
     
+    # Load env (for credentials) and login to Docker Hub if possible
+    load_env
+    dockerhub_login
+
     # Pull latest image from registry
     log "Pulling latest image(s) from registry..."
     $COMPOSE -f "$COMPOSE_FILE" pull
