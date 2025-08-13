@@ -135,9 +135,9 @@ deploy() {
     log "Stopping existing services..."
     $COMPOSE -f "$COMPOSE_FILE" down --remove-orphans || true
     
-    # Build new image
-    log "Building Docker image..."
-    $COMPOSE -f "$COMPOSE_FILE" build --no-cache
+    # Pull latest image from registry
+    log "Pulling latest image(s) from registry..."
+    $COMPOSE -f "$COMPOSE_FILE" pull
     
     # Start services
     log "Starting services..."

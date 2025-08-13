@@ -2,7 +2,7 @@
 
 services:
   pokemon-api:
-    build: .
+    image: mateuszg541/pokemon-api-service:latest
     container_name: pokemon-api
     restart: unless-stopped
     ports:

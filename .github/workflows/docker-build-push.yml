@@ -69,7 +69,11 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           echo "🧪 Testing Docker image..."
-          docker run --rm -d -p 20275:20275 --name test-container ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:latest
+          docker run --rm -d \
+            -e PORT=3001 -e HOST=0.0.0.0 \
+            -p 20275:3001 \
+            --name test-container \
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:latest
           
           # Wait for container to start and initialize
           echo "⏳ Waiting for container to start..."
