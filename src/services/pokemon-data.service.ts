@@ -68,18 +68,11 @@ export class PokemonDataService {
     });
   }
 
-  /**
-   * Check if the service is properly initialized with data
-   */
   isInitialized(): boolean {
     return this.pokemonData.length > 0 || 
            this.suggestionsData !== null;
   }
 
-  /**
-   * Get initialization status with detailed information
-   * Useful for tests to verify what data is loaded
-   */
   getInitializationStatus(): {
     pokemonDataLoaded: boolean;
     suggestionsDataLoaded: boolean;
@@ -94,10 +87,7 @@ export class PokemonDataService {
     };
   }
 
-  /**
-   * Validate suggestions data structure
-   * Useful for tests to ensure data integrity
-   */
+
   validateSuggestionsData(): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
     
@@ -113,7 +103,6 @@ export class PokemonDataService {
     if (!Array.isArray(this.suggestionsData.pokemon)) {
       errors.push('Pokemon array is missing or invalid');
     } else {
-      // Validate each Pokemon entry
       this.suggestionsData.pokemon.forEach((pokemon, index) => {
         if (!pokemon.id || typeof pokemon.id !== 'number') {
           errors.push(`Pokemon at index ${index} has invalid id`);
@@ -137,12 +126,10 @@ export class PokemonDataService {
     const errors: string[] = [];
     
     try {
-      // Verify data directory exists
       if (!fs.existsSync(this.dataDir)) {
         throw new DataLoadError(`Data directory does not exist: ${this.dataDir}`);
       }
 
-      // Load Pokemon data with error handling
       try {
         const pokemonPath = path.join(this.dataDir, 'pokemon.json');
         if (fs.existsSync(pokemonPath)) {
@@ -165,7 +152,6 @@ export class PokemonDataService {
         throw new DataLoadError(errorMsg, 'pokemon.json', error instanceof Error ? error : undefined);
       }
 
-      // Load species data with error handling
       try {
         const speciesPath = path.join(this.dataDir, 'species.json');
         if (fs.existsSync(speciesPath)) {
@@ -185,10 +171,8 @@ export class PokemonDataService {
         const errorMsg = `Failed to load species data: ${error instanceof Error ? error.message : 'Unknown error'}`;
         errors.push(errorMsg);
         console.error('❌', errorMsg);
-        // Don't throw for optional data, just log
       }
 
-      // Load evolution chains with error handling
       try {
         const evolutionPath = path.join(this.dataDir, 'evolution-chains.json');
         if (fs.existsSync(evolutionPath)) {
@@ -208,10 +192,8 @@ export class PokemonDataService {
         const errorMsg = `Failed to load evolution chains: ${error instanceof Error ? error.message : 'Unknown error'}`;
         errors.push(errorMsg);
         console.error('❌', errorMsg);
-        // Don't throw for optional data, just log
       }
 
-      // Load type data with error handling
       try {
         const typePath = path.join(this.dataDir, 'types.json');
         if (fs.existsSync(typePath)) {
@@ -231,17 +213,14 @@ export class PokemonDataService {
         const errorMsg = `Failed to load type data: ${error instanceof Error ? error.message : 'Unknown error'}`;
         errors.push(errorMsg);
         console.error('❌', errorMsg);
-        // Don't throw for optional data, just log
       }
 
-      // Load suggestions data with error handling (critical for suggestions feature)
       try {
         const suggestionsPath = path.join(this.dataDir, 'suggestions.json');
         if (fs.existsSync(suggestionsPath)) {
           const rawData = fs.readFileSync(suggestionsPath, 'utf-8');
           this.suggestionsData = JSON.parse(rawData);
           
-          // Validate suggestions data structure
           if (!this.suggestionsData || !this.suggestionsData.pokemon || !Array.isArray(this.suggestionsData.pokemon)) {
             throw new ValidationError('Invalid suggestions data structure');
           }
@@ -255,11 +234,9 @@ export class PokemonDataService {
         const errorMsg = `Failed to load suggestions data: ${error instanceof Error ? error.message : 'Unknown error'}`;
         errors.push(errorMsg);
         console.error('❌', errorMsg);
-        // Don't throw for suggestions data, but warn
         console.warn('⚠️ Suggestions feature will not be available');
       }
 
-      // Summary logging
       if (errors.length > 0) {
         console.warn(`⚠️ Data loading completed with ${errors.length} warnings/errors:`);
         errors.forEach(error => console.warn(`  - ${error}`));
@@ -269,11 +246,10 @@ export class PokemonDataService {
       
     } catch (error) {
       console.error('💥 Critical error during data loading:', error);
-      throw error; // Re-throw critical errors
+      throw error; 
     }
   }
 
-  // Transform image URLs to use local server
   private transformImageUrls(pokemon: Pokemon): Pokemon {
     const baseUrl = process.env.BASE_URL || 'http://srv36.mikr.us:20275';
     
@@ -304,16 +280,13 @@ export class PokemonDataService {
     };
   }
 
-  // Get Pokemon by ID or name
   getPokemon(identifier: string | number): Pokemon | null {
     try {
-      // Validate input
       if (identifier === null || identifier === undefined) {
         console.debug('Invalid identifier provided to getPokemon:', identifier);
         return null;
       }
 
-      // Check if service is initialized
       if (!this.isInitialized()) {
         throw new ServiceNotInitializedError('Service must be initialized before getting Pokemon data');
       }
@@ -321,14 +294,12 @@ export class PokemonDataService {
       let pokemon: Pokemon | null = null;
       
       if (typeof identifier === 'number') {
-        // Validate number input
         if (identifier < 1 || !Number.isInteger(identifier)) {
           console.debug(`Invalid Pokemon ID: ${identifier} (must be positive integer)`);
           return null;
         }
         pokemon = this.pokemonData.find(p => p.id === identifier) || null;
       } else if (typeof identifier === 'string') {
-        // Validate and sanitize string input
         const sanitizedName = identifier.trim().toLowerCase();
         if (sanitizedName.length === 0) {
           console.debug('Empty Pokemon name provided');
@@ -348,18 +319,15 @@ export class PokemonDataService {
     } catch (error) {
       console.error('💥 Error in getPokemon:', error);
       
-      // For non-critical errors, return null instead of throwing
       if (error instanceof ServiceNotInitializedError) {
         console.warn('⚠️ Returning null due to service not initialized');
         return null;
       }
       
-      // Re-throw unexpected errors
       throw error;
     }
   }
 
-  // Get Pokemon species by ID or name
   getPokemonSpecies(identifier: string | number): PokemonSpecies | null {
     if (typeof identifier === 'number') {
       return this.speciesData.find(s => s.id === identifier) || null;
@@ -372,12 +340,10 @@ export class PokemonDataService {
     ) || null;
   }
 
-  // Get evolution chain by ID
   getEvolutionChain(id: number): EvolutionChain | null {
     return this.evolutionChains.find(ec => ec.id === id) || null;
   }
 
-  // Get type by ID or name
   getType(identifier: string | number): PokemonType | null {
     if (typeof identifier === 'number') {
       return this.typeData.find(t => t.id === identifier) || null;
@@ -387,7 +353,6 @@ export class PokemonDataService {
     return this.typeData.find(t => t.name.toLowerCase() === name) || null;
   }
 
-  // Get all Pokemon (with pagination)
   getAllPokemon(offset: number = 0, limit: number = 20): { count: number; results: Array<{ name: string; url: string }> } {
     const total = this.pokemonData.length;
     const paginatedPokemon = this.pokemonData.slice(offset, offset + limit);
@@ -402,7 +367,6 @@ export class PokemonDataService {
     };
   }
 
-  // Get all types
   getAllTypes(): { count: number; results: Array<{ name: string; url: string }> } {
     return {
       count: this.typeData.length,
@@ -413,7 +377,6 @@ export class PokemonDataService {
     };
   }
 
-  // Search Pokemon by name (partial match)
   searchPokemon(query: string): Pokemon[] {
     const searchTerm = query.toLowerCase();
     return this.pokemonData.filter(pokemon => 
@@ -421,7 +384,6 @@ export class PokemonDataService {
     );
   }
 
-  // Get Pokemon by type
   getPokemonByType(typeName: string): Pokemon[] {
     const type = this.getType(typeName);
     if (!type) return [];
@@ -436,7 +398,6 @@ export class PokemonDataService {
     );
   }
 
-  // Get stats
   getStats(): {
     totalPokemon: number;
     totalTypes: number;
@@ -451,51 +412,42 @@ export class PokemonDataService {
     };
   }
 
-  // Get Pokemon name suggestions for search functionality
   getPokemonSuggestions(query: string): string[] {
     try {
-      // Validate input
       if (!query || typeof query !== 'string') {
         console.debug('Invalid query provided to getPokemonSuggestions:', { query, type: typeof query });
         return [];
       }
 
-      // Sanitize input
       const sanitizedQuery = query.trim();
       if (sanitizedQuery.length === 0) {
         console.debug('Empty query after sanitization');
         return [];
       }
 
-      // Enforce minimum query length (business rule)
       if (sanitizedQuery.length < 3) {
         console.debug(`Query too short: ${sanitizedQuery.length} characters (minimum: 3)`);
         return [];
       }
 
-      // Check if service is initialized
       if (!this.isInitialized()) {
         throw new ServiceNotInitializedError('Service must be initialized before getting suggestions');
       }
 
-      // Check if suggestions data is loaded
       if (!this.suggestionsData || !this.suggestionsData.pokemon) {
         console.warn('⚠️ Suggestions data not loaded - returning empty results');
         return [];
       }
 
-      // Validate suggestions data structure
       if (!Array.isArray(this.suggestionsData.pokemon)) {
         throw new ValidationError('Suggestions data is corrupted - pokemon array is invalid');
       }
 
       const queryLower = sanitizedQuery.toLowerCase();
       
-      // Filter Pokemon names that contain the query string with error handling
       try {
         const suggestions = this.suggestionsData.pokemon
           .filter((pokemon: PokemonSuggestion) => {
-            // Validate each Pokemon entry
             if (!pokemon || typeof pokemon.name !== 'string') {
               console.warn('Invalid Pokemon entry found in suggestions data:', pokemon);
               return false;
@@ -504,19 +456,18 @@ export class PokemonDataService {
           })
           .map((pokemon: PokemonSuggestion) => {
             try {
-              // Capitalize first letter for proper display
               const name = pokemon.displayName || pokemon.name;
               if (typeof name !== 'string') {
                 console.warn('Invalid name found for Pokemon:', pokemon);
-                return pokemon.name; // Fallback to original name
+                return pokemon.name; 
               }
               return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
             } catch (error) {
               console.warn('Error processing Pokemon name:', pokemon, error);
-              return pokemon.name; // Fallback to original name
+              return pokemon.name; 
             }
           })
-          .slice(0, 10); // Limit to 10 suggestions
+          .slice(0, 10); 
 
         console.debug(`Found ${suggestions.length} suggestions for query: "${sanitizedQuery}"`);
         return suggestions;
@@ -529,18 +480,15 @@ export class PokemonDataService {
     } catch (error) {
       console.error('💥 Error in getPokemonSuggestions:', error);
       
-      // For non-critical errors, return empty array instead of throwing
       if (error instanceof ServiceNotInitializedError || error instanceof ValidationError) {
         console.warn('⚠️ Returning empty suggestions due to error:', error.message);
         return [];
       }
       
-      // Re-throw unexpected errors
       throw error;
     }
   }
 
-  // Reload data (useful after scraping new data)
   reloadData(): void {
     this.loadData();
   }

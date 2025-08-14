@@ -13,10 +13,8 @@ pokemonService = new PokemonDataService();
   });
 
 beforeEach(async () => {
-    // Use public initialize method instead of accessing private methods
     await pokemonService.initialize();
     
-    // Verify service is properly initialized
     expect(pokemonService.isInitialized()).toBe(true);
   });
 
@@ -53,11 +51,9 @@ describe('Pokemon Suggestions', () => {
 describe('Valid Query Processing', () => {
         const validQueryCases = TestHelpers.generateTestCases(TestData.validQueries);
 
-// ===== TYPESCRIPT: ARRAY ITERATION WITH DESTRUCTURING =====
 
       validQueryCases.forEach(({ name, data }) => {
 
-// ===== VITEST: DYNAMIC TEST GENERATION =====
 
 it(TestHelpers.createTestDescription(
         `should handle "${data.query}" query`,
