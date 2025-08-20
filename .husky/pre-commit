@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+
+# Husky pre-commit hook: bump patch version on every commit
+. "$(dirname -- "$0")/_/husky.sh" 2>/dev/null || true
+
+echo "🔖 Bumping patch version (pre-commit)..."
+# Bump version without creating a git tag
+npm version patch --no-git-tag-version || exit 1
+
+# Ensure changes are included in this commit
+git add package.json package-lock.json 2>/dev/null || true
+
+echo "✅ Version bumped."

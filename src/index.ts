@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
 import pokemonRoutes from './routes/pokemon.routes';
+import pkg from '../package.json';
 
 // Load environment variables
 dotenv.config();
@@ -58,6 +59,26 @@ app.get('/health', (req: express.Request, res: express.Response) => {
     status: 'ok', 
     service: 'Pokemon API Service',
     timestamp: new Date().toISOString()
+  });
+});
+
+// Version endpoint (root-level)
+type PackageInfo = { name: string; version: string };
+const { name: serviceName, version: serviceVersion } = pkg as PackageInfo;
+app.get('/version', (_req: express.Request, res: express.Response) => {
+  res.status(200).json({
+    name: serviceName,
+    version: serviceVersion,
+    env: process.env.NODE_ENV || 'development',
+  });
+});
+
+// Version under API namespace as well
+app.get('/api/v2/version', (_req: express.Request, res: express.Response) => {
+  res.status(200).json({
+    name: serviceName,
+    version: serviceVersion,
+    env: process.env.NODE_ENV || 'development',
   });
 });
 
