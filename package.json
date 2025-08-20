@@ -1,6 +1,6 @@
 {
   "name": "pokemon-api-service",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Custom Pokemon API service that mimics the official Pokemon API",
   "main": "dist/index.js",
   "scripts": {
