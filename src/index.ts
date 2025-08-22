@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
+import swaggerUi from 'swagger-ui-express';
+import swaggerJsdoc, { OAS3Definition, OAS3Options } from 'swagger-jsdoc';
 import pokemonRoutes from './routes/pokemon.routes';
 import pkg from '../package.json';
 
@@ -53,9 +55,101 @@ app.use(express.json());
 // Serve static images
 app.use('/images', express.static(path.join(__dirname, '..', 'images')));
 
-// Service metadata (for health/version responses)
+// Service metadata (for health/version responses and docs)
 type PackageInfo = { name: string; version: string };
 const { name: serviceName, version: serviceVersion } = pkg as PackageInfo;
+
+// Swagger/OpenAPI setup
+const swaggerDefinition: OAS3Definition = {
+  openapi: '3.0.0',
+  info: {
+    title: `${serviceName} API`,
+    version: serviceVersion,
+    description: 'Custom Pokemon API service documentation',
+  },
+  servers: [{ url: `http://${host}:${port}`, description: 'Current server' }],
+  paths: {
+    '/health': {
+      get: {
+        summary: 'Health check',
+        responses: {
+          '200': {
+            description: 'Service is healthy',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    status: { type: 'string', example: 'ok' },
+                    message: { type: 'string' },
+                    name: { type: 'string' },
+                    version: { type: 'string' },
+                    service: { type: 'string' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/version': {
+      get: {
+        summary: 'Service version (root)',
+        responses: {
+          '200': {
+            description: 'Version info',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string' },
+                    version: { type: 'string' },
+                    env: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/v2/version': {
+      get: {
+        summary: 'Service version (API namespace)',
+        responses: {
+          '200': {
+            description: 'Version info',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string' },
+                    version: { type: 'string' },
+                    env: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+const swaggerOptions: OAS3Options = {
+  definition: swaggerDefinition,
+  apis: [],
+};
+
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
+
+app.get('/api-docs.json', (_req, res) => res.json(swaggerSpec));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Health check endpoint
 app.get('/health', (req: express.Request, res: express.Response) => {
