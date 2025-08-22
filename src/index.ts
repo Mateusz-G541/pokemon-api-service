@@ -53,18 +53,23 @@ app.use(express.json());
 // Serve static images
 app.use('/images', express.static(path.join(__dirname, '..', 'images')));
 
+// Service metadata (for health/version responses)
+type PackageInfo = { name: string; version: string };
+const { name: serviceName, version: serviceVersion } = pkg as PackageInfo;
+
 // Health check endpoint
 app.get('/health', (req: express.Request, res: express.Response) => {
-  res.status(200).json({ 
-    status: 'ok', 
+  res.status(200).json({
+    status: 'ok',
+    message: `${serviceName} v${serviceVersion}`,
+    name: serviceName,
+    version: serviceVersion,
     service: 'Pokemon API Service',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
 // Version endpoint (root-level)
-type PackageInfo = { name: string; version: string };
-const { name: serviceName, version: serviceVersion } = pkg as PackageInfo;
 app.get('/version', (_req: express.Request, res: express.Response) => {
   res.status(200).json({
     name: serviceName,
