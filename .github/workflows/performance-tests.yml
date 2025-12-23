@@ -5,11 +5,26 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 'Which k6 suite to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - smoke
+          - details
+          - search
+          - suggestions
 
 jobs:
   performance-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      TEST_SUITE: ${{ github.event.inputs.suite || 'all' }}
     
     services:
       influxdb:
@@ -81,18 +96,22 @@ jobs:
           sudo apt-get install k6
 
       - name: Run Smoke Tests
+        if: env.TEST_SUITE == 'all' || env.TEST_SUITE == 'smoke'
         run: k6 run --config configs/smoke.json --out influxdb=http://localhost:8086/k6 scripts/pokemon-list.js
         continue-on-error: false
 
       - name: Run Details Test
+        if: env.TEST_SUITE == 'all' || env.TEST_SUITE == 'details'
         run: k6 run --config configs/smoke.json --out influxdb=http://localhost:8086/k6 scripts/pokemon-details.js
         continue-on-error: true
 
       - name: Run Search Test
+        if: env.TEST_SUITE == 'all' || env.TEST_SUITE == 'search'
         run: k6 run --config configs/smoke.json --out influxdb=http://localhost:8086/k6 scripts/wyszukiwanie-artykulu.js
         continue-on-error: true
 
       - name: Run Suggestions Test
+        if: env.TEST_SUITE == 'all' || env.TEST_SUITE == 'suggestions'
         run: k6 run --config configs/smoke.json --out influxdb=http://localhost:8086/k6 scripts/wyszukiwanie-szkolenia.js
         continue-on-error: true
 
