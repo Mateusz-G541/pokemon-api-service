@@ -93,10 +93,28 @@ jobs:
         run: |
           set -e
           echo "Checking route contracts (fail fast on 404)..."
-          curl -sSfo /dev/null http://localhost:20275/api/v2/pokemon?limit=1
-          curl -sSfo /dev/null http://localhost:20275/api/v2/pokemon/1
-          curl -sSfo /dev/null "http://localhost:20275/api/v2/search/pokemon?q=pika"
-          curl -sSfo /dev/null "http://localhost:20275/api/v2/pokemon/suggestions?query=pika"
+
+          check_url() {
+            url="$1"
+            tmp="$(mktemp)"
+            code=$(curl -sS -o "$tmp" -w "%{http_code}" "$url" || echo "curl_failed")
+            if [ "$code" != "200" ]; then
+              echo "❌ Contract check failed: $url"
+              echo "HTTP status: $code"
+              echo "Response (first 400 bytes):"
+              head -c 400 "$tmp" || true
+              echo
+              rm -f "$tmp" || true
+              exit 1
+            fi
+            rm -f "$tmp" || true
+            echo "✅ $url"
+          }
+
+          check_url "http://localhost:20275/api/v2/pokemon?limit=1"
+          check_url "http://localhost:20275/api/v2/pokemon/1"
+          check_url "http://localhost:20275/api/v2/search/pokemon?q=pika"
+          check_url "http://localhost:20275/api/v2/pokemon/suggestions?query=pika"
 
       - name: Set up k6
         run: |
