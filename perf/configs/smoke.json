@@ -8,6 +8,10 @@
   },
   "thresholds": {
     "http_req_failed{expected_response:true}": ["rate==0"],
-    "http_req_duration": ["p(95)<500", "p(99)<1000"]
+    "http_req_duration": ["p(95)<500", "p(99)<1000"],
+    "http_req_duration{endpoint:list}": ["p(95)<300"],
+    "http_req_duration{endpoint:details}": ["p(95)<500"],
+    "http_req_duration{endpoint:search}": ["p(95)<800"],
+    "http_req_duration{endpoint:suggestions}": ["p(95)<600"]
   }
 }

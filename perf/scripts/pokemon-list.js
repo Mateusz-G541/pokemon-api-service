@@ -9,7 +9,7 @@ export default function () {
   group("Pokemon List API", function () {
     // Test basic list endpoint
     const listResponse = http.get(`${BASE_URL}${ROUTES.pokemonList}?limit=20`, {
-      tags: { expected_response: 'true' }
+      tags: { endpoint: 'list', expected_response: 'true' }
     });
     assert(listResponse, check(listResponse, {
       "status is 200": (r) => r.status === 200,
@@ -21,7 +21,7 @@ export default function () {
 
     // Test pagination
     const paginatedResponse = http.get(`${BASE_URL}${ROUTES.pokemonList}?offset=20&limit=10`, {
-      tags: { expected_response: 'true' }
+      tags: { endpoint: 'list', expected_response: 'true' }
     });
     assert(paginatedResponse, check(paginatedResponse, {
       "status is 200": (r) => r.status === 200,

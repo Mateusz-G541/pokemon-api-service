@@ -13,7 +13,9 @@ export default function () {
   group("Pokemon Details API", function () {
     // Test by ID
     testPokemonIds.forEach(id => {
-      const response = http.get(`${BASE_URL}${ROUTES.pokemonDetails(id)}`);
+      const response = http.get(`${BASE_URL}${ROUTES.pokemonDetails(id)}`, {
+        tags: { endpoint: 'details', expected_response: 'true' }
+      });
       assert(response, check(response, {
         "status is 200": (r) => r.status === 200,
         "has id": (r) => r.json().id === id,
@@ -31,7 +33,9 @@ export default function () {
 
     // Test by name
     testPokemonNames.forEach(name => {
-      const response = http.get(`${BASE_URL}${ROUTES.pokemonDetails(name)}`);
+      const response = http.get(`${BASE_URL}${ROUTES.pokemonDetails(name)}`, {
+        tags: { endpoint: 'details', expected_response: 'true' }
+      });
       assert(response, check(response, {
         "status is 200": (r) => r.status === 200,
         "has name": (r) => r.json().name === name,
@@ -43,7 +47,7 @@ export default function () {
 
     // Test invalid Pokemon
     const invalidResponse = http.get(`${BASE_URL}${ROUTES.pokemonDetails(99999)}`, {
-      tags: { expected_response: 'false' }
+      tags: { endpoint: 'details', expected_response: 'false' }
     });
     assert(invalidResponse, check(invalidResponse, {
       "status is 404": (r) => r.status === 404,

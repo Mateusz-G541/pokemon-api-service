@@ -11,7 +11,7 @@ export default function () {
   group("Pokemon Suggestions API", function () {
     suggestionQueries.forEach(query => {
       const response = http.get(`${BASE_URL}${ROUTES.pokemonSuggestions}?query=${query}`, {
-        tags: { expected_response: 'true' }
+        tags: { endpoint: 'suggestions', expected_response: 'true' }
       });
       assert(response, check(response, {
         "status is 200": (r) => r.status === 200,
@@ -27,7 +27,7 @@ export default function () {
 
     // Test short query (should return empty)
     const shortResponse = http.get(`${BASE_URL}${ROUTES.pokemonSuggestions}?query=pi`, {
-      tags: { expected_response: 'true' }
+      tags: { endpoint: 'suggestions', expected_response: 'true' }
     });
     assert(shortResponse, check(shortResponse, {
       "status is 200": (r) => r.status === 200,
@@ -38,7 +38,7 @@ export default function () {
 
     // Test no query parameter
     const noQueryResponse = http.get(`${BASE_URL}${ROUTES.pokemonSuggestions}`, {
-      tags: { expected_response: 'false' }
+      tags: { endpoint: 'suggestions', expected_response: 'false' }
     });
     assert(noQueryResponse, check(noQueryResponse, {
       "status is 400": (r) => r.status === 400,
