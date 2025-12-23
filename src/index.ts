@@ -51,7 +51,7 @@ const limiter = rateLimit({
 });
 
 app.use(limiter);
-app.use(metricsMiddleware);
+app.use(metricsMiddleware());
 app.use(express.json());
 
 // Serve static images
