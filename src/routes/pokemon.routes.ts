@@ -18,6 +18,27 @@ router.get('/pokemon', (req: express.Request, res: express.Response) => {
   }
 });
 
+// GET /api/v2/pokemon/suggestions - Get Pokemon name suggestions for search
+router.get('/pokemon/suggestions', (req: express.Request, res: express.Response) => {
+  try {
+    const query = req.query.query as string;
+
+    if (!query) {
+      return res.status(400).json({ error: 'Query parameter is required' });
+    }
+
+    if (query.length < 3) {
+      return res.json([]);
+    }
+
+    const suggestions = pokemonService.getPokemonSuggestions(query);
+    res.json(suggestions);
+  } catch (error) {
+    console.error('Error fetching Pokemon suggestions:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // GET /api/v2/pokemon/:identifier - Get specific Pokemon by ID or name
 router.get('/pokemon/:identifier', (req: express.Request, res: express.Response) => {
   try {
@@ -131,27 +152,6 @@ router.get('/stats', (req: express.Request, res: express.Response) => {
     res.json(stats);
   } catch (error) {
     console.error('Error fetching stats:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// GET /api/v2/pokemon/suggestions - Get Pokemon name suggestions for search
-router.get('/pokemon/suggestions', (req: express.Request, res: express.Response) => {
-  try {
-    const query = req.query.query as string;
-    
-    if (!query) {
-      return res.status(400).json({ error: 'Query parameter is required' });
-    }
-    
-    if (query.length < 3) {
-      return res.json([]);
-    }
-    
-    const suggestions = pokemonService.getPokemonSuggestions(query);
-    res.json(suggestions);
-  } catch (error) {
-    console.error('Error fetching Pokemon suggestions:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
