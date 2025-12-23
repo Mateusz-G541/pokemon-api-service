@@ -103,7 +103,7 @@ jobs:
 
       - name: Test Search Endpoint
         run: |
-          response=$(curl -s http://localhost:20275/api/v2/pokemon/search?q=pikachu)
+          response=$(curl -s http://localhost:20275/api/v2/search/pokemon?q=pikachu)
           count=$(echo "$response" | jq -r '.results | length')
           echo "Found $count results for 'pikachu'"
           if [ "$count" -gt 0 ]; then
@@ -115,7 +115,7 @@ jobs:
 
       - name: Test Suggestions Endpoint
         run: |
-          response=$(curl -s http://localhost:20275/api/v2/pokemon/suggestions?q=pika)
+          response=$(curl -s http://localhost:20275/api/v2/pokemon/suggestions?query=pika)
           count=$(echo "$response" | jq -r '. | length')
           echo "Got $count suggestions for 'pika'"
           if [ "$count" -gt 0 ]; then
