@@ -70,6 +70,7 @@ jobs:
         if: github.event_name != 'pull_request'
         timeout-minutes: 10
         run: |
+          set -euo pipefail
           echo "🧪 Testing Docker image..."
           docker run --rm -d \
             -e PORT=3001 -e HOST=0.0.0.0 \
@@ -80,6 +81,18 @@ jobs:
           # Give container initial time to start and load data
           echo "⏳ Waiting for container to initialize (up to 60 seconds)..."
           sleep 5
+
+          echo "🔎 Debug: docker ps"
+          docker ps --no-trunc | head -n 50 || true
+
+          echo "🔎 Debug: container inspect (network mode + ports)"
+          docker inspect test-container --format 'NetworkMode={{.HostConfig.NetworkMode}} Ports={{json .NetworkSettings.Ports}}' || true
+
+          echo "🔎 Debug: host listening ports (ss)"
+          ss -lntp | head -n 200 || true
+
+          echo "🔎 Debug: in-container request to /health via Node (does not require curl in image)"
+          docker exec test-container node -e "const http=require('http');const req=http.get('http://127.0.0.1:3001/health',res=>{console.log('status',res.statusCode);let d='';res.on('data',c=>d+=c);res.on('end',()=>{console.log('body',d);process.exit(res.statusCode===200?0:2);});});req.on('error',e=>{console.error('error',e.message);process.exit(1);});" || true
           
           # Poll for health check with longer timeout
           max_attempts=15
@@ -94,12 +107,16 @@ jobs:
             fi
             
             # Test health endpoint with increased timeout
-            if curl -4 -fsS --connect-timeout 3 --max-time 5 http://127.0.0.1:3001/health >/dev/null 2>&1; then
+            url="http://127.0.0.1:3001/health"
+            echo "🔎 Attempt $i: curl $url"
+            if curl -4 -v -fsS --connect-timeout 3 --max-time 5 "$url" >/dev/null; then
               echo "✅ Health check passed on attempt $i!"
               docker stop test-container
               echo "✅ Docker image test passed!"
               exit 0
             fi
+
+            echo "🔎 Attempt $i: curl exit code: $?"
             
             echo "⏳ Health check attempt $i/$max_attempts failed, retrying in 4 seconds..."
             sleep 4
