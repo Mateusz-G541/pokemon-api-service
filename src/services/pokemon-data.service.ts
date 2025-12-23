@@ -8,6 +8,7 @@ import {
   SuggestionsData,
   PokemonSuggestion
 } from '../types/pokemon';
+import { MetricsService } from './metrics.service';
 
 // Custom Error Classes for better error handling
 class DataLoadError extends Error {
@@ -38,9 +39,11 @@ export class PokemonDataService {
   private evolutionChains: EvolutionChain[] = [];
   private typeData: PokemonType[] = [];
   private suggestionsData: SuggestionsData | null = null;
+  private metricsService: MetricsService;
 
   constructor() {
     this.dataDir = path.join(__dirname, '..', '..', 'data');
+    this.metricsService = new MetricsService();
     this.loadData();
   }
 
@@ -325,6 +328,9 @@ export class PokemonDataService {
       }
       
       throw error;
+    } finally {
+      // Record Pokemon access metric
+      this.metricsService.recordPokemonAccess(identifier);
     }
   }
 
@@ -358,13 +364,18 @@ export class PokemonDataService {
     const paginatedPokemon = this.pokemonData.slice(offset, offset + limit);
     const baseUrl = process.env.BASE_URL || 'http://srv36.mikr.us:20275';
     
-    return {
+    const result = {
       count: total,
       results: paginatedPokemon.map(p => ({
         name: p.name,
         url: `${baseUrl}/api/v2/pokemon/${p.id}`
       }))
     };
+    
+    // Record list access metric
+    this.metricsService.recordListAccess(offset, limit, result.results.length);
+    
+    return result;
   }
 
   getAllTypes(): { count: number; results: Array<{ name: string; url: string }> } {
@@ -379,9 +390,14 @@ export class PokemonDataService {
 
   searchPokemon(query: string): Pokemon[] {
     const searchTerm = query.toLowerCase();
-    return this.pokemonData.filter(pokemon => 
+    const results = this.pokemonData.filter(pokemon => 
       pokemon.name.toLowerCase().includes(searchTerm)
     );
+    
+    // Record search metric
+    this.metricsService.recordSearch(query, results.length);
+    
+    return results;
   }
 
   getPokemonByType(typeName: string): Pokemon[] {
@@ -470,6 +486,10 @@ export class PokemonDataService {
           .slice(0, 10); 
 
         console.debug(`Found ${suggestions.length} suggestions for query: "${sanitizedQuery}"`);
+        
+        // Record suggestions metric
+        this.metricsService.recordSuggestions(sanitizedQuery, suggestions.length);
+        
         return suggestions;
         
       } catch (error) {

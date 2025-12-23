@@ -7,6 +7,7 @@ import path from 'path';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc, { OAS3Definition, OAS3Options } from 'swagger-jsdoc';
 import pokemonRoutes from './routes/pokemon.routes';
+import { metricsMiddleware } from './services/metrics.service';
 import pkg from '../package.json';
 
 // Load environment variables
@@ -50,6 +51,7 @@ const limiter = rateLimit({
 });
 
 app.use(limiter);
+app.use(metricsMiddleware);
 app.use(express.json());
 
 // Serve static images
@@ -190,7 +192,7 @@ app.use('*', (req: express.Request, res: express.Response) => {
 });
 
 // Error handler
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Something went wrong!' });
 });

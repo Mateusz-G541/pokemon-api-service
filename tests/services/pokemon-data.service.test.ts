@@ -52,7 +52,7 @@ describe('Valid Query Processing', () => {
         const validQueryCases = TestHelpers.generateTestCases(TestData.validQueries);
 
 
-      validQueryCases.forEach(({ name, data }) => {
+      validQueryCases.forEach(({ _name, data }) => {
 
 
 it(TestHelpers.createTestDescription(
@@ -94,7 +94,7 @@ describe('Edge Cases & Error Handling', () => {
 
         const invalidQueryCases = TestHelpers.generateTestCases(TestData.invalidQueries);
       
-      invalidQueryCases.forEach(({ name, data }) => {
+      invalidQueryCases.forEach(({ _name, data }) => {
 it(TestHelpers.createTestDescription(
         `should handle "${data.query}" query`,
    data.description

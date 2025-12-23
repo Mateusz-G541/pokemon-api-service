@@ -1,0 +1,46 @@
+{
+  "dashboard": {
+    "title": "Pokemon API Internal Metrics",
+    "tags": ["pokemon", "api", "metrics"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "title": "HTTP Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "query": "SELECT mean(\"count\") FROM \"http_requests\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+            "rawQuery": true
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "title": "Pokemon Access Count",
+        "type": "graph",
+        "targets": [
+          {
+            "query": "SELECT count(\"count\") FROM \"pokemon_access\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+            "rawQuery": true
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "5s"
+  }
+}

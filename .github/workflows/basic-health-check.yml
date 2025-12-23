@@ -1,0 +1,130 @@
+name: Basic Health Check
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Start API
+        run: |
+          npm start > api.log 2>&1 &
+          echo $! > api.pid
+        env:
+          NODE_ENV: test
+          PORT: 20275
+
+      - name: Wait for API startup
+        run: |
+          for i in {1..30}; do
+            if curl -f http://localhost:20275/health 2>/dev/null; then
+              echo "✅ API is healthy"
+              exit 0
+            fi
+            echo "Waiting for API... ($i/30)"
+            sleep 2
+          done
+          echo "❌ API failed to start"
+          cat api.log
+          exit 1
+
+      - name: Health Check
+        run: |
+          response=$(curl -s http://localhost:20275/health)
+          echo "Health response: $response"
+          if echo "$response" | grep -q '"status":"ok"'; then
+            echo "✅ Health check passed"
+          else
+            echo "❌ Health check failed"
+            exit 1
+          fi
+
+      - name: Check API Version
+        run: |
+          version=$(curl -s http://localhost:20275/version | jq -r '.version')
+          echo "API Version: $version"
+          if [ -z "$version" ] || [ "$version" = "null" ]; then
+            echo "❌ Could not get version"
+            exit 1
+          fi
+          echo "✅ Version check passed"
+
+      - name: Test Pokemon List Endpoint
+        run: |
+          response=$(curl -s http://localhost:20275/api/v2/pokemon?limit=5)
+          count=$(echo "$response" | jq -r '.results | length')
+          echo "Got $count Pokemon"
+          if [ "$count" -gt 0 ]; then
+            echo "✅ Pokemon list endpoint works"
+          else
+            echo "❌ Pokemon list endpoint failed"
+            exit 1
+          fi
+
+      - name: Test Pokemon Details Endpoint
+        run: |
+          response=$(curl -s http://localhost:20275/api/v2/pokemon/1)
+          name=$(echo "$response" | jq -r '.name')
+          echo "Pokemon name: $name"
+          if [ "$name" = "bulbasaur" ]; then
+            echo "✅ Pokemon details endpoint works"
+          else
+            echo "❌ Pokemon details endpoint failed"
+            exit 1
+          fi
+
+      - name: Test Search Endpoint
+        run: |
+          response=$(curl -s http://localhost:20275/api/v2/pokemon/search?q=pikachu)
+          count=$(echo "$response" | jq -r '.results | length')
+          echo "Found $count results for 'pikachu'"
+          if [ "$count" -gt 0 ]; then
+            echo "✅ Search endpoint works"
+          else
+            echo "❌ Search endpoint failed"
+            exit 1
+          fi
+
+      - name: Test Suggestions Endpoint
+        run: |
+          response=$(curl -s http://localhost:20275/api/v2/pokemon/suggestions?q=pika)
+          count=$(echo "$response" | jq -r '. | length')
+          echo "Got $count suggestions for 'pika'"
+          if [ "$count" -gt 0 ]; then
+            echo "✅ Suggestions endpoint works"
+          else
+            echo "⚠️ Suggestions endpoint returned no results (may be expected)"
+          fi
+
+      - name: Stop API
+        if: always()
+        run: |
+          if [ -f api.pid ]; then
+            kill $(cat api.pid) || true
+          fi
+
+      - name: API Logs
+        if: failure()
+        run: cat api.log

@@ -1,6 +1,6 @@
 {
   "name": "pokemon-api-service",
-  "version": "1.0.6",
+  "version": "1.0.9",
   "description": "Custom Pokemon API service that mimics the official Pokemon API",
   "main": "dist/index.js",
   "scripts": {
@@ -14,9 +14,18 @@
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
-    "prepare": "npx --no-install husky install || true"
+    "prepare": "npx --no-install husky install || true",
+    "stack:up": "docker-compose up -d",
+    "stack:down": "docker-compose down",
+    "stack:logs": "docker-compose logs -f",
+    "test:smoke": "docker-compose --profile test run k6 run /scripts/pokemon-list.js --config /configs/smoke.json",
+    "test:load": "docker-compose --profile test run k6 run /scripts/pokemon-list.js --config /configs/load.json",
+    "test:details": "docker-compose --profile test run k6 run /scripts/pokemon-details.js --config /configs/smoke.json",
+    "test:search": "docker-compose --profile test run k6 run /scripts/wyszukiwanie-artykulu.js --config /configs/smoke.json",
+    "test:suggestions": "docker-compose --profile test run k6 run /scripts/wyszukiwanie-szkolenia.js --config /configs/smoke.json"
   },
   "dependencies": {
+    "@influxdata/influxdb-client": "^1.35.0",
     "axios": "^1.6.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

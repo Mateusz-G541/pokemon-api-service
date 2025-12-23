@@ -1,0 +1,127 @@
+name: Performance Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  performance-tests:
+    runs-on: ubuntu-latest
+    
+    services:
+      influxdb:
+        image: influxdb:1.8
+        env:
+          INFLUXDB_DB: k6
+        ports:
+          - 8086:8086
+        options: >-
+          --health-cmd="curl -f http://localhost:8086/ping || exit 1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Start API
+        run: npm start &
+        env:
+          NODE_ENV: test
+          INFLUXDB_URL: http://localhost:8086
+          INFLUXDB_DATABASE: k6
+
+      - name: Wait for API to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -f http://localhost:20275/health; then
+              echo "API is ready"
+              exit 0
+            fi
+            echo "Waiting for API... ($i/30)"
+            sleep 2
+          done
+          echo "API failed to start"
+          exit 1
+
+      - name: Set up k6
+        run: |
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6-stable.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Run Smoke Tests
+        run: k6 run --config configs/smoke.json --out influxdb=http://localhost:8086/k6 scripts/pokemon-list.js
+        continue-on-error: false
+
+      - name: Run Details Test
+        run: k6 run --config configs/smoke.json --out influxdb=http://localhost:8086/k6 scripts/pokemon-details.js
+        continue-on-error: true
+
+      - name: Run Search Test
+        run: k6 run --config configs/smoke.json --out influxdb=http://localhost:8086/k6 scripts/wyszukiwanie-artykulu.js
+        continue-on-error: true
+
+      - name: Run Suggestions Test
+        run: k6 run --config configs/smoke.json --out influxdb=http://localhost:8086/k6 scripts/wyszukiwanie-szkolenia.js
+        continue-on-error: true
+
+      - name: Upload k6 Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: k6-results
+          path: |
+            k6-results/
+          retention-days: 30
+
+  # Optional: Test against production endpoint
+  production-smoke-test:
+    runs-on: ubuntu-latest
+    # Only run on main branch push, not on PRs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up k6
+        run: |
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6-stable.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Smoke Test Against Production
+        run: |
+          k6 run \
+            --config configs/smoke.json \
+            -e BASE_URL=${{ secrets.PRODUCTION_API_URL }} \
+            scripts/pokemon-list.js
+        continue-on-error: true
+
+      - name: Report Results
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '⚠️ Production smoke tests failed. Check the workflow logs.'
+            })
