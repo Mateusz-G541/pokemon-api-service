@@ -107,17 +107,17 @@ jobs:
       - name: Run Details Test
         if: env.TEST_SUITE == 'all' || env.TEST_SUITE == 'details'
         run: k6 run --config perf/configs/smoke.json --summary-export perf/results/${{ env.TEST_SUITE }}/pokemon-details.summary.json --out influxdb=http://localhost:8086/k6 perf/scripts/pokemon-details.js
-        continue-on-error: true
+        continue-on-error: false
 
       - name: Run Search Test
         if: env.TEST_SUITE == 'all' || env.TEST_SUITE == 'search'
         run: k6 run --config perf/configs/smoke.json --summary-export perf/results/${{ env.TEST_SUITE }}/pokemon-search.summary.json --out influxdb=http://localhost:8086/k6 perf/scripts/pokemon-search.js
-        continue-on-error: true
+        continue-on-error: false
 
       - name: Run Suggestions Test
         if: env.TEST_SUITE == 'all' || env.TEST_SUITE == 'suggestions'
         run: k6 run --config perf/configs/smoke.json --summary-export perf/results/${{ env.TEST_SUITE }}/pokemon-suggestions.summary.json --out influxdb=http://localhost:8086/k6 perf/scripts/pokemon-suggestions.js
-        continue-on-error: true
+        continue-on-error: false
 
       - name: Stop API
         if: always()
