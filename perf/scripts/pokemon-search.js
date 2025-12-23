@@ -10,7 +10,9 @@ const searchQueries = ["pika", "char", "bulb", "mew"];
 export default function () {
   group("Pokemon Search API", function () {
     searchQueries.forEach(query => {
-      const response = http.get(`${BASE_URL}${ROUTES.pokemonSearch}?q=${query}`);
+      const response = http.get(`${BASE_URL}${ROUTES.pokemonSearch}?q=${query}`, {
+        tags: { expected_response: 'true' }
+      });
       assert(response, check(response, {
         "status is 200": (r) => r.status === 200,
         "has results array": (r) => r.json().results && Array.isArray(r.json().results),
@@ -25,7 +27,9 @@ export default function () {
     });
 
     // Test empty search
-    const emptyResponse = http.get(`${BASE_URL}${ROUTES.pokemonSearch}?q=`);
+    const emptyResponse = http.get(`${BASE_URL}${ROUTES.pokemonSearch}?q=`, {
+      tags: { expected_response: 'false' }
+    });
     assert(emptyResponse, check(emptyResponse, {
       "status is 400": (r) => r.status === 400,
     }), "Empty Search Query");
@@ -33,7 +37,9 @@ export default function () {
     sleep(thinkTime());
 
     // Test non-existent Pokemon
-    const noResultsResponse = http.get(`${BASE_URL}${ROUTES.pokemonSearch}?q=nonexistentpokemon123`);
+    const noResultsResponse = http.get(`${BASE_URL}${ROUTES.pokemonSearch}?q=nonexistentpokemon123`, {
+      tags: { expected_response: 'true' }
+    });
     assert(noResultsResponse, check(noResultsResponse, {
       "status is 200": (r) => r.status === 200,
       "empty results": (r) => r.json().results.length === 0,

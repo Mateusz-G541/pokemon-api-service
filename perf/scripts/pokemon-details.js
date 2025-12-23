@@ -42,7 +42,9 @@ export default function () {
     sleep(thinkTime());
 
     // Test invalid Pokemon
-    const invalidResponse = http.get(`${BASE_URL}${ROUTES.pokemonDetails(99999)}`);
+    const invalidResponse = http.get(`${BASE_URL}${ROUTES.pokemonDetails(99999)}`, {
+      tags: { expected_response: 'false' }
+    });
     assert(invalidResponse, check(invalidResponse, {
       "status is 404": (r) => r.status === 404,
     }), "Invalid Pokemon ID");
