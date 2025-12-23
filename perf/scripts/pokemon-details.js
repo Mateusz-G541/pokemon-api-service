@@ -1,6 +1,6 @@
 import http from "k6/http";
-import { check, group } from "k6";
-import { assert } from "../utils/helper.js";
+import { check, group, sleep } from "k6";
+import { assert, thinkTime } from "../utils/helper.js";
 import { getEmbededResources } from "../utils/helper.js";
 import { BASE_URL } from '../utils/config.js';
 
@@ -24,6 +24,8 @@ export default function () {
       if (response.status === 200) {
         getEmbededResources(response.body);
       }
+
+      sleep(thinkTime());
     });
 
     // Test by name
@@ -34,6 +36,8 @@ export default function () {
         "has name": (r) => r.json().name === name,
         "has id": (r) => typeof r.json().id === "number",
       }), `Pokemon Details by Name ${name}`);
+
+      sleep(thinkTime());
     });
 
     // Test invalid Pokemon
@@ -41,5 +45,7 @@ export default function () {
     assert(invalidResponse, check(invalidResponse, {
       "status is 404": (r) => r.status === 404,
     }), "Invalid Pokemon ID");
+
+    sleep(thinkTime());
   });
 }

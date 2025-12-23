@@ -1,6 +1,6 @@
 import http from "k6/http";
-import { check, group } from "k6";
-import { assert } from "../utils/helper.js";
+import { check, group, sleep } from "k6";
+import { assert, thinkTime } from "../utils/helper.js";
 import { BASE_URL } from '../utils/config.js';
 
 // Search queries to test
@@ -19,6 +19,8 @@ export default function () {
           return results.length === 0 || results.some(p => p.name.toLowerCase().includes(query.toLowerCase()));
         },
       }), `Pokemon Search for "${query}"`);
+
+      sleep(thinkTime());
     });
 
     // Test empty search
@@ -27,11 +29,15 @@ export default function () {
       "status is 400": (r) => r.status === 400,
     }), "Empty Search Query");
 
+    sleep(thinkTime());
+
     // Test non-existent Pokemon
     const noResultsResponse = http.get(`${BASE_URL}/api/v2/search/pokemon?q=nonexistentpokemon123`);
     assert(noResultsResponse, check(noResultsResponse, {
       "status is 200": (r) => r.status === 200,
       "empty results": (r) => r.json().results.length === 0,
     }), "No Results Search");
+
+    sleep(thinkTime());
   });
 }

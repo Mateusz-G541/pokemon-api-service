@@ -6,6 +6,10 @@ export function assert(response, ok, label) {
   }
 }
 
+export function thinkTime(minSeconds = 0.2, maxSeconds = 1) {
+  return minSeconds + Math.random() * (maxSeconds - minSeconds);
+}
+
 export function getEmbededResources(_htmlOrBody) {
   return [];
 }

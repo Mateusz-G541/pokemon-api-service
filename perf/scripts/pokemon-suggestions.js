@@ -1,6 +1,6 @@
 import http from "k6/http";
-import { check, group } from "k6";
-import { assert } from "../utils/helper.js";
+import { check, group, sleep } from "k6";
+import { assert, thinkTime } from "../utils/helper.js";
 import { BASE_URL } from '../utils/config.js';
 
 // Suggestion queries to test
@@ -18,6 +18,8 @@ export default function () {
           return suggestions.length === 0 || suggestions.some(s => s.toLowerCase().includes(query.toLowerCase()));
         },
       }), `Pokemon Suggestions for "${query}"`);
+
+      sleep(thinkTime());
     });
 
     // Test short query (should return empty)
@@ -27,10 +29,14 @@ export default function () {
       "empty array for short query": (r) => Array.isArray(r.json()) && r.json().length === 0,
     }), "Short Query Suggestions");
 
+    sleep(thinkTime());
+
     // Test no query parameter
     const noQueryResponse = http.get(`${BASE_URL}/api/v2/pokemon/suggestions`);
     assert(noQueryResponse, check(noQueryResponse, {
       "status is 400": (r) => r.status === 400,
     }), "Missing Query Parameter");
+
+    sleep(thinkTime());
   });
 }
