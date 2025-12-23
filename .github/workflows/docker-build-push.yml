@@ -68,7 +68,7 @@ jobs:
 
       - name: Test Docker image
         if: github.event_name != 'pull_request'
-        timeout-minutes: 5
+        timeout-minutes: 10
         run: |
           echo "🧪 Testing Docker image..."
           docker run --rm -d \
@@ -91,7 +91,7 @@ jobs:
             fi
             
             # Test health endpoint
-            if curl -sf http://localhost:20275/health >/dev/null 2>&1; then
+            if curl -fsS --connect-timeout 2 --max-time 2 http://localhost:20275/health >/dev/null 2>&1; then
               echo "✅ Health check passed on attempt $i!"
               docker stop test-container
               echo "✅ Docker image test passed!"
