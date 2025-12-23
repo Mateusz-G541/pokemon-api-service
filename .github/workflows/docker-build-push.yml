@@ -92,7 +92,11 @@ jobs:
           ss -lntp | head -n 200 || true
 
           echo "🔎 Debug: in-container request to /health via Node (does not require curl in image)"
-          docker exec test-container node -e "const http=require('http');const req=http.get('http://127.0.0.1:3001/health',res=>{console.log('status',res.statusCode);let d='';res.on('data',c=>d+=c);res.on('end',()=>{console.log('body',d);process.exit(res.statusCode===200?0:2);});});req.on('error',e=>{console.error('error',e.message);process.exit(1);});" || true
+          timeout 10s docker exec test-container node -e "const http=require('http');const req=http.get('http://127.0.0.1:3001/health',res=>{console.log('status',res.statusCode);let d='';res.on('data',c=>d+=c);res.on('end',()=>{console.log('body',d);process.exit(res.statusCode===200?0:2);});});req.setTimeout(3000,()=>{console.error('error request timeout');req.destroy(new Error('timeout'));});req.on('error',e=>{console.error('error',e.message);process.exit(1);});" || {
+            echo "⚠️ In-container probe timed out or failed"
+            echo "📋 Container logs (last 200 lines):"
+            docker logs --tail 200 test-container 2>&1 || true
+          }
           
           # Poll for health check with longer timeout
           max_attempts=15
@@ -116,7 +120,8 @@ jobs:
               exit 0
             fi
 
-            echo "🔎 Attempt $i: curl exit code: $?"
+            rc=$?
+            echo "🔎 Attempt $i: curl exit code: $rc"
             
             echo "⏳ Health check attempt $i/$max_attempts failed, retrying in 4 seconds..."
             sleep 4
