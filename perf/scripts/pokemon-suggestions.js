@@ -2,6 +2,7 @@ import http from "k6/http";
 import { check, group, sleep } from "k6";
 import { assert, thinkTime } from "../utils/helper.js";
 import { BASE_URL } from '../utils/config.js';
+import { ROUTES } from '../utils/routes.js';
 
 // Suggestion queries to test
 const suggestionQueries = ["pika", "char", "bulb", "mew", "squ"];
@@ -9,7 +10,7 @@ const suggestionQueries = ["pika", "char", "bulb", "mew", "squ"];
 export default function () {
   group("Pokemon Suggestions API", function () {
     suggestionQueries.forEach(query => {
-      const response = http.get(`${BASE_URL}/api/v2/pokemon/suggestions?query=${query}`);
+      const response = http.get(`${BASE_URL}${ROUTES.pokemonSuggestions}?query=${query}`);
       assert(response, check(response, {
         "status is 200": (r) => r.status === 200,
         "returns array": (r) => Array.isArray(r.json()),
@@ -23,7 +24,7 @@ export default function () {
     });
 
     // Test short query (should return empty)
-    const shortResponse = http.get(`${BASE_URL}/api/v2/pokemon/suggestions?query=pi`);
+    const shortResponse = http.get(`${BASE_URL}${ROUTES.pokemonSuggestions}?query=pi`);
     assert(shortResponse, check(shortResponse, {
       "status is 200": (r) => r.status === 200,
       "empty array for short query": (r) => Array.isArray(r.json()) && r.json().length === 0,
@@ -32,7 +33,7 @@ export default function () {
     sleep(thinkTime());
 
     // Test no query parameter
-    const noQueryResponse = http.get(`${BASE_URL}/api/v2/pokemon/suggestions`);
+    const noQueryResponse = http.get(`${BASE_URL}${ROUTES.pokemonSuggestions}`);
     assert(noQueryResponse, check(noQueryResponse, {
       "status is 400": (r) => r.status === 400,
     }), "Missing Query Parameter");

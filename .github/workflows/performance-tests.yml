@@ -88,6 +88,16 @@ jobs:
           cat api.log
           exit 1
 
+      - name: Contract Check (Routes)
+        timeout-minutes: 1
+        run: |
+          set -e
+          echo "Checking route contracts (fail fast on 404)..."
+          curl -sSfo /dev/null http://localhost:20275/api/v2/pokemon?limit=1
+          curl -sSfo /dev/null http://localhost:20275/api/v2/pokemon/1
+          curl -sSfo /dev/null "http://localhost:20275/api/v2/search/pokemon?q=pika"
+          curl -sSfo /dev/null "http://localhost:20275/api/v2/pokemon/suggestions?query=pika"
+
       - name: Set up k6
         run: |
           sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
