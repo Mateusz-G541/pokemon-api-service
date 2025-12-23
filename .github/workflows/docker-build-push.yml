@@ -94,7 +94,7 @@ jobs:
             fi
             
             # Test health endpoint with increased timeout
-            if curl -fsS --connect-timeout 3 --max-time 5 http://localhost:20275/health >/dev/null 2>&1; then
+            if curl -4 -fsS --connect-timeout 3 --max-time 5 http://127.0.0.1:20275/health >/dev/null 2>&1; then
               echo "✅ Health check passed on attempt $i!"
               docker stop test-container
               echo "✅ Docker image test passed!"
