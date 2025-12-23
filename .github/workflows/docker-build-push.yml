@@ -13,6 +13,7 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     
     steps:
       - name: Checkout code
@@ -67,6 +68,7 @@ jobs:
 
       - name: Test Docker image
         if: github.event_name != 'pull_request'
+        timeout-minutes: 5
         run: |
           echo "🧪 Testing Docker image..."
           docker run --rm -d \
@@ -75,42 +77,36 @@ jobs:
             --name test-container \
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:latest
           
-          # Wait for container to start and initialize
+          # Wait for container and health check with intelligent polling
           echo "⏳ Waiting for container to start..."
-          sleep 30
-          
-          # Check if container is still running and get logs
-          if ! docker ps | grep -q test-container; then
-            echo "❌ Container stopped unexpectedly"
-            echo "📋 Container logs:"
-            docker logs test-container 2>&1 || echo "Could not retrieve logs"
-            echo "🔍 Checking if container exists:"
-            docker ps -a | grep test-container || echo "Container not found in docker ps -a"
-            exit 1
-          fi
-          
-          # Test health endpoint with retries
-          echo "🔍 Testing health endpoint..."
-          for i in {1..5}; do
-            if curl -f http://localhost:20275/health; then
-              echo "✅ Health check passed!"
-              break
-            else
-              echo "⏳ Attempt $i failed, retrying in 10 seconds..."
-              sleep 10
-            fi
-            if [ $i -eq 5 ]; then
-              echo "❌ Health check failed after 5 attempts"
-              docker logs test-container
-              docker stop test-container
+          max_attempts=20
+          for i in $(seq 1 $max_attempts); do
+            # Check if container is still running
+            if ! docker ps | grep -q test-container; then
+              echo "❌ Container stopped unexpectedly on attempt $i"
+              echo "📋 Container logs:"
+              docker logs test-container 2>&1 || echo "Could not retrieve logs"
+              docker rm test-container 2>/dev/null || true
               exit 1
             fi
+            
+            # Test health endpoint
+            if curl -sf http://localhost:20275/health >/dev/null 2>&1; then
+              echo "✅ Health check passed on attempt $i!"
+              docker stop test-container
+              echo "✅ Docker image test passed!"
+              exit 0
+            fi
+            
+            echo "⏳ Health check attempt $i/$max_attempts failed, retrying in 3 seconds..."
+            sleep 3
           done
           
-          # Cleanup
+          # If we get here, health checks failed
+          echo "❌ Health check failed after $max_attempts attempts"
+          docker logs test-container
           docker stop test-container
-          
-          echo "✅ Docker image test passed!"
+          exit 1
 
       - name: Image digest
         if: github.event_name != 'pull_request'

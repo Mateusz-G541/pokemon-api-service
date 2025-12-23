@@ -9,6 +9,7 @@ on:
 jobs:
   performance-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     
     services:
       influxdb:
@@ -39,23 +40,37 @@ jobs:
         run: npm run build
 
       - name: Start API
-        run: npm start &
+        run: |
+          npm start > api.log 2>&1 &
+          echo $! > api.pid
         env:
           NODE_ENV: test
           INFLUXDB_URL: http://localhost:8086
           INFLUXDB_DATABASE: k6
 
       - name: Wait for API to be ready
+        timeout-minutes: 2
         run: |
-          for i in {1..30}; do
-            if curl -f http://localhost:20275/health; then
-              echo "API is ready"
+          max_attempts=30
+          for i in $(seq 1 $max_attempts); do
+            if curl -sf http://localhost:20275/health >/dev/null 2>&1; then
+              echo "✅ API is ready"
               exit 0
             fi
-            echo "Waiting for API... ($i/30)"
+            
+            # Check if API process is still alive
+            if ! kill -0 $(cat api.pid) 2>/dev/null; then
+              echo "❌ API process died"
+              echo "📋 API Logs:"
+              cat api.log
+              exit 1
+            fi
+            
+            echo "Waiting for API... ($i/$max_attempts)"
             sleep 2
           done
-          echo "API failed to start"
+          echo "❌ API failed to start"
+          cat api.log
           exit 1
 
       - name: Set up k6
@@ -81,6 +96,14 @@ jobs:
         run: k6 run --config configs/smoke.json --out influxdb=http://localhost:8086/k6 scripts/wyszukiwanie-szkolenia.js
         continue-on-error: true
 
+      - name: Stop API
+        if: always()
+        run: |
+          if [ -f api.pid ]; then
+            kill $(cat api.pid) || true
+            sleep 1
+          fi
+
       - name: Upload k6 Results
         if: always()
         uses: actions/upload-artifact@v3
@@ -93,6 +116,7 @@ jobs:
   # Optional: Test against production endpoint
   production-smoke-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     # Only run on main branch push, not on PRs
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
