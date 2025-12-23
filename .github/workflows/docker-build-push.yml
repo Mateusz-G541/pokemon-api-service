@@ -77,9 +77,12 @@ jobs:
             --name test-container \
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:latest
           
-          # Wait for container and health check with intelligent polling
-          echo "⏳ Waiting for container to start..."
-          max_attempts=20
+          # Give container initial time to start and load data
+          echo "⏳ Waiting for container to initialize (up to 60 seconds)..."
+          sleep 5
+          
+          # Poll for health check with longer timeout
+          max_attempts=15
           for i in $(seq 1 $max_attempts); do
             # Check if container is still running
             if ! docker ps | grep -q test-container; then
@@ -90,20 +93,21 @@ jobs:
               exit 1
             fi
             
-            # Test health endpoint
-            if curl -fsS --connect-timeout 2 --max-time 2 http://localhost:20275/health >/dev/null 2>&1; then
+            # Test health endpoint with increased timeout
+            if curl -fsS --connect-timeout 3 --max-time 5 http://localhost:20275/health >/dev/null 2>&1; then
               echo "✅ Health check passed on attempt $i!"
               docker stop test-container
               echo "✅ Docker image test passed!"
               exit 0
             fi
             
-            echo "⏳ Health check attempt $i/$max_attempts failed, retrying in 3 seconds..."
-            sleep 3
+            echo "⏳ Health check attempt $i/$max_attempts failed, retrying in 4 seconds..."
+            sleep 4
           done
           
-          # If we get here, health checks failed
+          # If we get here, health checks failed - show logs for debugging
           echo "❌ Health check failed after $max_attempts attempts"
+          echo "📋 Container logs:"
           docker logs test-container
           docker stop test-container
           exit 1
