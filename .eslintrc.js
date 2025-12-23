@@ -56,6 +56,9 @@ module.exports = {
     'node_modules',
     'coverage',
     '**/*.d.ts',
+    '.eslintrc.js',
     'scripts/',
+    'utils/',
+    'perf/',
   ],
 };
